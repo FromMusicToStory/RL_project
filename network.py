@@ -4,7 +4,7 @@ from transformers import AutoModel
 
 
 class Classifier(nn.Module):
-    def __init__(self, model_name, num_classes):
+    def __init__(self, model_name='klue/roberta-base', num_classes=177):
         super().__init__()
         self.model = AutoModel.from_pretrained(model_name)
         self.clf_layer = nn.Linear(self.model.config.hidden_size, num_classes)
@@ -25,6 +25,6 @@ if __name__ == '__main__':
     dataset = KLAID_dataset()
     dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
-    model = Classifier('klue/roberta-base', 177)
+    model = Classifier(num_classes=177)
     output = model(next(iter(dataloader))['encoded_output'], next(iter(dataloader))['encoded_attention_mask'])
     print(output.shape)

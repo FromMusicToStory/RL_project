@@ -6,9 +6,9 @@ from collections import Counter
 
 
 class KLAID_dataset(Dataset):
-    def __init__(self, split='all'):
+    def __init__(self, model_name='klue/roberta-base', split='all'):
         self.dataset = load_dataset("lawcompany/KLAID", 'ljp')['train']
-        self.tokenizer = AutoTokenizer.from_pretrained("klue/roberta-small")
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.max_len = 125
 
         train, test = self.split_dataset(self.dataset, test_size=0.1)

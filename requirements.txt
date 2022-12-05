@@ -1,8 +1,8 @@
 datasets
 torch
 transformers
-numpy
 gym
+numpy
 scikit-learn
 pytorch-lightning
 wandb

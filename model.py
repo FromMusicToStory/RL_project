@@ -17,9 +17,9 @@ class RLClassification(pl.LightningModule):
         super(RLClassification, self).__init__()
         self.hparams = hparams
         self.model_name = hparams['model_name']
-        self.num_classes = KLAID_dataset(split='train', tokenizer_name= self.model_name).get_number_of_classes()
+        self.num_classes = len(KLAID_dataset(split = 'all', tokenizer_name = self.model_name).get_class_num())
 
-        self.classification_model = Classifier(model_name=model_name, num_classes=self.num_classes)
+        self.classification_model = Classifier(model_name = self.model_name, num_classes=self.num_classes)
         self.env = ClassifyEnv()
         self.agent = Agent()
         self.policy = Policy()
@@ -34,14 +34,16 @@ class RLClassification(pl.LightningModule):
         return train_dataloader
 
     def val_dataloader(self):
-        # dataset = KLAID_dataset('valid')
-        pass
+        dataset = KLAID_dataset(split='test', tokenizer_name=self.model_name)
+        val_dataloader = DataLoader(dataset, batch_size=self.hparams['batch_size'],
+                                      num_workers=self.hparams['num_workers'],
+                                      shuffle=True)
+        return val_dataloader
 
     def configure_optimizers(self):
         optimizer = AdamW( lr=self.hparams['lr'])
 
-
-    def forward(self, ):
+    def forward(self):
         pass
 
     def training_step(self, batch, batch_idx):
@@ -50,7 +52,7 @@ class RLClassification(pl.LightningModule):
     def training_epoch_end(self, outputs: EPOCH_OUTPUT) -> None:
         pass
 
-    def validation_step(self, ):
+    def validation_step(self):
         # is there a validation step in RL????
         pass
 
@@ -59,4 +61,3 @@ class RLClassification(pl.LightningModule):
 
     def infer(self):
         pass
-

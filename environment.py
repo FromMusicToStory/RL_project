@@ -24,8 +24,10 @@ class ClassifyEnv(gym.Env):
 
         # 논문과 달리 Multi-class classification이기 때문에
         # majority class인지 아닌지 저장하는 list가 필요함
-        self.majorities = majorities
-        self.minorities = minorities
+        majority_class, minority_class = self.dataset.get_major_minor_class()
+
+        self.majorities = [data for data in self.dataset if data['laws_service_id'] in majority_class.keys()]
+        self.minorities = [data for data in self.dataset if data['laws_service_id'] in minority_class.keys()]
         self.id = np.arange(len(self.dataset))
 
         self.game_len = len(self.dataset)

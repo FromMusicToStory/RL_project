@@ -19,10 +19,10 @@ class ClassifyEnv(gym.Env):
         majority_class, minority_class = self.dataset.get_major_minor_class()
         self.majorities = majority_class.keys()
         self.minorities = minority_class.keys()
-        self.imb_rate = majority_class          # imb_rate : imbalanced rates for each majority class; dict {key: class_num / value : imb_rate}
+        self.imb_rate = majority_class             # imb_rate : imbalanced rates for each majority class; dict {key: class_num / value : imb_rate}
 
-        self.game_len = len(self.dataset)       # length of this episode = the number of data
-        self.num_classes = len(self.answer)     # num_classes : the number of classes
+        self.game_len = len(self.dataset)          # length of this episode = the number of data
+        self.num_classes = len(set(self.answer))   # num_classes : the number of classes
         self.action_space = gym.spaces.Discrete(self.num_classes)
         print(self.action_space)
         self.step_ind = 0

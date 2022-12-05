@@ -25,6 +25,6 @@ if __name__ == '__main__':
     dataset = KLAID_dataset()
     dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
-    model = Classifier('klue/roberta-base', 117)
+    model = Classifier('klue/roberta-base', 177)
     output = model(next(iter(dataloader))['encoded_output'], next(iter(dataloader))['encoded_attention_mask'])
     print(output.shape)

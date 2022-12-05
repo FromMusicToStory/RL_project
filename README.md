@@ -14,3 +14,6 @@ We use the [KLAID](https://huggingface.co/datasets/lawcompany/KLAID) dataset.
 - [ ]  Classification Model을 Pretrained Model 을 Finetuning 하는 것으로 바꾸기
 - [ ]  DQN 을 다른 걸로 바꾸기
 - [x]  KLAID 데이터셋 프로세싱하는 dataset.py 만들기 (data loading 용) => hugginface dataset 사용하면 됨
+
+## References
+[Pytorch-Lightning Tutorial For DQN](https://pytorch-lightning.readthedocs.io/en/stable/notebooks/lightning_examples/reinforce-learning-DQN.html)

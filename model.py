@@ -26,7 +26,14 @@ class RLClassification(pl.LightningModule):
         self.agent = Agent()
         self.policy = Policy()
         self.processor = ClassifyProcessor()
-        self.memory = SequentialMemory()
+        # do we need processor?
+        # Explanation about processor from keras-rl
+        # A processor acts as a coupling mechanism between an `Agent` and its `Env`. This can
+        #     be necessary if your agent has different requirements with respect to the form of the
+        #     observations, actions, and rewards of the environment. By implementing a custom processor,
+        #     you can effectively translate between the two without having to change the underlaying
+        #     implementation of the agent or environment.
+        self.memory = SequentialMemory(limit=config['limit'], **config)
 
     def train_dataloader(self):
         dataset = KLAID_dataset(split='train', tokenizer_name=self.model_name)  # model name is for pretraiend tokenizer
@@ -43,16 +50,23 @@ class RLClassification(pl.LightningModule):
         return val_dataloader
 
     def configure_optimizers(self):
-        optimizer = AdamW( lr=self.hparams['lr'])
+        # model_parameter 가져와야 됨
+        optimizer = AdamW(model_parameters, lr=self.config['lr'])
 
     def forward(self):
         pass
+        # first, classification model => get logits
+        # second, get action from logits (Agent)
+        # 이렇게 하는 게 맞겠지????
+
 
     def training_step(self, batch, batch_idx):
         pass
+        # return loss
 
     def training_epoch_end(self, outputs: EPOCH_OUTPUT) -> None:
         pass
+        # get metrics and log the loss
 
     def validation_step(self):
         # is there a validation step in RL????

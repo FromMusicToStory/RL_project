@@ -2,32 +2,32 @@ import numpy as np
 from typing import List, Dict
 import gym
 from sklearn.metrics import classification_report, confusion_matrix, f1_score
-
+from torch.utils.data import Dataset
 
 class ClassifyEnv(gym.Env):
-    def __init__(self, run_mode: str, imbalanced_rate: Dict, dataset, labels: List, majorities: List, minorities: List):
-        # run_mode : eitther train or test
-        # imb_rate : imbalanced rates of each minority class, dict, key: class_num / value : imb_rate
+    def __init__(self, run_mode: str, dataset : Dataset):
+        # run_mode : either train or test
+        # imb_rate : imbalanced rates for each majority class, dict, key: class_num / value : imb_rate
         # env_data : list of inputs
         # answer : list of answers corresponding to the input
         # id :
-        # game_len : length of this episode? the number of data
+        # game_len : length of this episode / the number of data
         # num_classes : the number of classes
         # action_space
         # step_id
         # y_pred : List
         self.run_mode = run_mode  # either train or test
-        self.imb_rate = imbalanced_rate  # how imbalanced is this dataset
 
         self.dataset = dataset
-        self.answer = labels
+        self.answer = [data['law_service_id'] for data in self.dataset]
 
-        # 논문과 달리 Multi-class classification이기 때문에
-        # majority class인지 아닌지 저장하는 list가 필요함
+        # 논문과 달리 Multi-class classification 문제이기 때문에,
+        # majority class인지 minority class인지 저장하는 list가 필요
         majority_class, minority_class = self.dataset.get_major_minor_class()
+        self.majorities = majority_class.keys()
+        self.minorities = minority_class.keys()
+        self.imb_rate =  majority_class # how imbalanced is this dataset
 
-        self.majorities = [data for data in self.dataset if data['laws_service_id'] in majority_class.keys()]
-        self.minorities = [data for data in self.dataset if data['laws_service_id'] in minority_class.keys()]
         self.id = np.arange(len(self.dataset))
 
         self.game_len = len(self.dataset)
@@ -37,7 +37,13 @@ class ClassifyEnv(gym.Env):
         self.step_ind = 0
         self.y_preds = []
 
-    def step(self, prediction):  # input : model's prediction value
+    def action_space(self):
+        """
+        1 for the minority class, 0 for the majority class.
+        """
+        return self.action_space
+
+    def step(self, prediction):
         # Input : model's prediction value
         # Output : data, reward, is_terminal, info
         # Function :

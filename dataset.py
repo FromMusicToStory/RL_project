@@ -35,9 +35,9 @@ class KLAID_dataset(Dataset):
             class_num = self.get_class_num()
             for key, value in zip(class_num.keys(), class_num.values()):
                 if value < statistics.mean(class_num.values()):
-                    minority_class[key] = value
+                    minority_class[key] = value / sum(class_num.values())
                 else:
-                    majority_class[key] = value
+                    majority_class[key] = value / sum(class_num.values())
 
             majority_class = {key: value for key, value in sorted(majority_class.items(), key=lambda item: item[1], reverse=True)}
             minority_class = {key: value for key, value in sorted(minority_class.items(), key=lambda item: item[1], reverse=True)}
@@ -66,7 +66,7 @@ class KLAID_dataset(Dataset):
 
 
 if __name__ == '__main__':
-    dataset = KLAID_dataset('all')
+    dataset = KLAID_dataset(split='all')
     print(dataset[0])
     print(len(dataset))
 

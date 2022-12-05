@@ -9,7 +9,7 @@ from model import RLClassification
 def main(config_path):
     config = yaml.safe_load(open(config_path))
 
-    model = RLClassification(config)
+    model = RLClassification(config, run_mode='train')
     model.train()
     lr_monitor = pl.callbacks.LearningRateMonitor()
     checkponiter = pl.callbacks.ModelCheckpoint(dir_path=config['checkpoint_path'],

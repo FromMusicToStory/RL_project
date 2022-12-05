@@ -13,4 +13,4 @@ We use the [KLAID](https://huggingface.co/datasets/lawcompany/KLAID) dataset.
 - [ ]  [Keras-RL](https://github.com/keras-rl/keras-rl) 패키지에서 사용할 것 Pytorch로 구현
 - [ ]  Classification Model을 Pretrained Model 을 Finetuning 하는 것으로 바꾸기
 - [ ]  DQN 을 다른 걸로 바꾸기
-- [ ]  KLAID 데이터셋 프로세싱하는 dataset.py 만들기 (data loading 용)
+- [x]  KLAID 데이터셋 프로세싱하는 dataset.py 만들기 (data loading 용) => hugginface dataset 사용하면 됨

@@ -5,7 +5,7 @@ This is our improved version of the paper [Deep Reinforcement Learning for Imbal
 
 The original Github is [here](https://github.com/linenus/DRL-For-imbalanced-Classification).
 
-We aimed to extend the original method to a Korean text classification task using a pre-trained BERT model.
+We aimed to extend the original method to a Korean multi-class text classification task using a pre-trained BERT model.
 
 We use the [KLAID](https://huggingface.co/datasets/lawcompany/KLAID) dataset.
 

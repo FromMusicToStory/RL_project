@@ -1,55 +1,41 @@
 import numpy as np
 from typing import List, Dict
 import gym
+from gym.utils import seeding
 from sklearn.metrics import classification_report, confusion_matrix, f1_score
 from torch.utils.data import Dataset
 
 class ClassifyEnv(gym.Env):
     def __init__(self, run_mode: str, dataset : Dataset):
-        # run_mode : either train or test
-        # imb_rate : imbalanced rates for each majority class, dict, key: class_num / value : imb_rate
-        # env_data : list of inputs
-        # answer : list of answers corresponding to the input
-        # id :
-        # game_len : length of this episode / the number of data
-        # num_classes : the number of classes
-        # action_space
-        # step_id
-        # y_pred : List
-        self.run_mode = run_mode  # either train or test
-
+        self.run_mode = run_mode    # run_mode: either train or test
         self.dataset = dataset
-        self.answer = [data['law_service_id'] for data in self.dataset]
+
+        self.anv_data = [[data['encoded_output'], data['encoded_attention_mask']] for data in self.dataset]      # env_data : list of inputs
+        self.answer = [data['law_service_id'] for data in self.dataset]                # answer : list of answers corresponding to the input
+        self.id = np.arange(len(self.dataset))
 
         # 논문과 달리 Multi-class classification 문제이기 때문에,
-        # majority class인지 minority class인지 저장하는 list가 필요
+        # majority class인지 minority class인지 저장하는 list가 필요함
         majority_class, minority_class = self.dataset.get_major_minor_class()
         self.majorities = majority_class.keys()
         self.minorities = minority_class.keys()
-        self.imb_rate =  majority_class # how imbalanced is this dataset
+        self.imb_rate = majority_class          # imb_rate : imbalanced rates for each majority class; dict {key: class_num / value : imb_rate}
 
-        self.id = np.arange(len(self.dataset))
-
-        self.game_len = len(self.dataset)
-        self.num_classes = len(self.answer)
+        self.game_len = len(self.dataset)       # length of this episode = the number of data
+        self.num_classes = len(self.answer)     # num_classes : the number of classes
         self.action_space = gym.spaces.Discrete(self.num_classes)
         print(self.action_space)
         self.step_ind = 0
-        self.y_preds = []
+        self.y_preds = []                       # y_preds : list of predictions
 
-    def action_space(self):
-        """
-        1 for the minority class, 0 for the majority class.
-        """
-        return self.action_space
+    def seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
 
     def step(self, prediction):
         # Input : model's prediction value
         # Output : data, reward, is_terminal, info
-        # Function :
-
         self.y_preds.append(prediction)
-
         y_true_cur = []  # 정답값
         info = {}
         terminal = False
@@ -86,6 +72,6 @@ class ClassifyEnv(gym.Env):
         if self.run_mode == 'train':
             np.random.shuffle(self.id)
         self.step_ind = 0
-        self.y_pred = []
+        self.y_preds = []
 
         return self.dataset[self.id[self.step_ind]]

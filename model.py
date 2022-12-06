@@ -102,7 +102,11 @@ class DQNClassification(pl.LightningModule):
         self.log('epsilon', epsilon)
 
         # Training
-        reward, terminal = self.agent.step(self.classification_model, epsilon, device)
+        # batch로 부터 state를 받아서 agent에 넘기고
+        # agent로 부터 prediction result, reward를 받음
+        # agent로부터 받음 result로 MSE loss 를 계산하도록 수정
+        #   env 로부터 answer를 받아와서 -> agent에서 true answer 받아서 MSE loss 계산
+        reward, terminal = self.agent.step(state, epsilon, device)
         self.episode_reward += reward
         self.log('episode_reward', self.episode_reward)
 

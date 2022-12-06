@@ -54,16 +54,15 @@ class ValueAgent(Agent):
         if device != 'cpu':
             state = state.to(device)
 
-        q_values = self.model(state)
+        q_values = self.model(state)    # classification model
         _, action = torch.max(q_values, dim=1)
         return int(action.item())
 
     @torch.no_grad()
-    def step(self, model: nn.Module,
-                   epsilon: float,
-                   device: str = "cuda:0") -> Tuple[float, bool]:
-        action = self.get_action(self.state, epsilon, device)
-        new_state, reward, terminal, _, _  = self.env.step(action)
+    def step(self, state, epsilon: float, device: str = "cuda:0") -> Tuple[float, bool]:
+        # Batch로 작동하도록 수정
+        action = self.get_action(state, epsilon, device)
+        new_state, reward, terminal, _, _ = self.env.step(action)
         trans = Transition(self.state, action, reward, new_state, terminal)
 
         self.buffer.append(trans)

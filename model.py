@@ -98,7 +98,7 @@ class DQNClassification(pl.LightningModule):
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], _) -> OrderedDict:
         device = self.get_device(batch)
-        epsilon = self.get_epsilon(self.hparams['epsilon_start'], self.hparams['epsilon_final'], self.capacity)
+        epsilon = self.get_epsilon(self.hparams['eps_start'], self.hparams['eps_end'], self.capacity)
         self.log('epsilon', epsilon)
 
         # Training

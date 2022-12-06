@@ -14,21 +14,21 @@ class ReplayBuffer:
     def __init__(self, capacity: int):
         self.buffer = deque(maxlen=capacity)
 
-        def __len__(self):
-            return len(self.buffer)
+    def __len__(self):
+        return len(self.buffer)
 
-        def append(self, transition: Transition):
-            # transition = (state, action, reward, next_state, terminal)
-            self.buffer.append(transition)
+    def append(self, transition: Transition):
+        # transition = (state, action, reward, next_state, terminal)
+        self.buffer.append(transition)
 
-        def sample(self, batch_size: int) -> Tuple:
-            indices = np.random.choice(len(self.buffer), batch_size, replace=False)
-            states, actions, rewards, next_states, terminals = zip(*[self.buffer[idx] for idx in indices])
-            return torch.tensor(states, dtype=torch.float), \
-                   torch.tensor(actions), \
-                   torch.tensor(rewards, dtype=torch.float), \
-                   torch.tensor(next_states, dtype=torch.float), \
-                   torch.tensor(terminals, dtype=torch.uint8)
+    def sample(self, batch_size: int) -> Tuple:
+        indices = np.random.choice(len(self.buffer), batch_size, replace=False)
+        states, actions, rewards, next_states, terminals = zip(*[self.buffer[idx] for idx in indices])
+        return torch.tensor(states, dtype=torch.float), \
+               torch.tensor(actions), \
+               torch.tensor(rewards, dtype=torch.float), \
+               torch.tensor(next_states, dtype=torch.float), \
+               torch.tensor(terminals, dtype=torch.uint8)
 
 
 class RLDataset(IterableDataset):

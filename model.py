@@ -5,6 +5,7 @@ from collections import OrderedDict
 
 import torch
 from torch.utils.data import DataLoader
+import torch.nn as nn
 from torch.optim import AdamW
 import pytorch_lightning as pl
 
@@ -12,100 +13,79 @@ from dataset import KLAID_dataset
 from network import Classifier
 from environment import ClassifyEnv
 from agents import ValueAgent
-from memory import SequentialMemory
+from buffer import ReplayBuffer, RLDataset
 
 
 class DQNClassification(pl.LightningModule):
     def __init__(self, hparams: Dict, run_mode: str):
         super(DQNClassification, self).__init__()
         self.hparams = hparams
-
         self.model_name = hparams['model_name']
-
         self.dataset = KLAID_dataset(model_name=self.model_name, split='all')
         self.num_classes = len(self.dataset.get_class_num())
+        self.criterion = nn.MSELoss()
 
         self.env = ClassifyEnv(run_mode=run_mode, dataset=self.dataset)
         self.env.seed(42)
 
         self.net = None
         self.target_net = None
+        self.build_networks()
 
-        self.agent = ValueAgent(self.net, self.num_classes, )
-        self.policy = Policy()
-        self.processor = ClassifyProcessor()
-        # do we need processor?
-        # Explanation about processor from keras-rl
-        # A processor acts as a coupling mechanism between an `Agent` and its `Env`. This can
-        #     be necessary if your agent has different requirements with respect to the form of the
-        #     observations, actions, and rewards of the environment. By implementing a custom processor,
-        #     you can effectively translate between the two without having to change the underlaying
-        #     implementation of the agent or environment.
-        self.memory = SequentialMemory(limit=hparams['limit'], **hparams)
-
+        self.capacity = len(self.dataset)
+        self.buffer = ReplayBuffer(self.capacity)
+        self.agent = ValueAgent(self.env, self.buffer, batch_size=hparams['batch_size'])
         self.total_reward = 0
         self.episode_reward = 0
+        self.populate(self.hparams['warm_start'])
 
-        self.total_episode_step = 0
-        self.episode_step = 0
-
-        self.reward_list = []
 
     def populate(self, warm_start: int) -> None:
-        # Populates the buffer with initial experience
+        # Populates the buffer with initial trasnsition
+        # warm_start: number of episodes to populate the buffer
         if warm_start > 0:
             for _ in range(warm_start):
-                self.source.agent.epsilon = 1.0
-                exp, _, _ = self.source.step()
-                self.buffer.append(exp)
+                self.agent.step(self.classification_model, epsilon=1.0)
 
     def build_networks(self):
         # Initializing the DQN network and the target network
         self.classification_model = Classifier(model_name=self.model_name, num_classes=self.num_classes)
         self.target_model = Classifier(model_name=self.model_name, num_classes=self.num_classes)
 
-
-    def train_dataloader(self):
-        dataset = KLAID_dataset(split='train', model_name=self.model_name)  # model name is for pre-traiend tokenizer
-        train_dataloader = DataLoader(dataset, batch_size=self.hparams['batch_size'],
-                                      num_workers=self.hparams['num_workers'],
-                                      shuffle=True)
-        return train_dataloader
-
-    def test_dataloader(self):
-        dataset = KLAID_dataset(split='test', model_name=self.model_name)
-        test_dataloader = DataLoader(dataset, batch_size=self.hparams['batch_size'],
-                                      num_workers=self.hparams['num_workers'],
-                                      shuffle=True)
-        return test_dataloader
-
-    def configure_optimizers(self):
-        optimizer = AdamW(self.net.parameters(), lr=self.hparams['lr'])
-        return [optimizer]
-
     def forward(self, batch):
-        # first, classification model => get logits
+        # InputL environment state
+        # Output: Q values
         logits = self.classification_model(batch['encoded_output'], batch['encoded_attention_mask'])
-        # second, get action from logits (Agent)
-        return logits
+        predictions = torch.argmax(logits, dim=1)
+        return predictions
 
     def loss(self, batch):
+        states, actions, rewards, next_states, dones = batch
+        state_action_values = self.classification_model(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
+        with torch.no_grad():
+            next_state_values = self.target_model(next_states),max(1)[0]
+            next_state_values[dones] = 0.0
+            next_state_values = next_state_values.detach()
+        expected_state_action_values = next_state_values * self.hparams['gamma'] + rewards
 
+        return self.criterion(state_action_values, expected_state_action_values)
+
+    def configure_optimizers(self):
+        optimizer = AdamW(self.classification_model.parameters(), lr=self.hparams['lr'])
+        return [optimizer]
+
+    def get_epsilon(self, start, end, frames):
+        # epsilon for Exploration or Exploitation
+        if self.global_step > frames:
+            return end
+        return start - (self.global_step / frames) * (start - end)
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], _) -> OrderedDict:
-        """
-        Carries out a single step through the environment to update the replay buffer.
-        Then calculates loss based on the minibatch recieved
-        Args:
-            batch: current mini batch of replay data
-            _: batch number, not used
-        Returns:
-            Training loss and log metrics
-        """
-        self.agent.update_epsilon(self.global_step)
+        epsilon = self.get_epsilon(self.hparams['epsilon_start'], self.hparams['epsilon_final'], self.hparams['epsilon_frames'])
+        self.log('epsilon', epsilon)
 
-        # step through environment with agent and add to buffer
         exp, reward, done = self.source.step()
+        reward, done = self.agent.play
         self.buffer.append(exp)
 
         self.episode_reward += reward
@@ -146,15 +126,29 @@ class DQNClassification(pl.LightningModule):
         return OrderedDict({'loss': loss, 'avg_reward': torch.tensor(self.avg_reward),
                             'log': log, 'progress_bar': status})
 
-    def training_epoch_end(self, outputs: EPOCH_OUTPUT) -> None:
-        pass
-        # get metrics and log the loss
+    def _dataloader(self):
+        self.buffer = ReplayBuffer(self.capacity)
+        self.populate(self.hparams['warm_start'])
+
+        dataset = RLDataset(self.buffer, self.hparams['batch_size'])
+        dataloader = DataLoader(dataset,
+                                batch_size=self.hparams['batch_size'], shuffle=True, num_workers=4)
+        return dataloader
+
+
+    def train_dataloader(self):
+        """Get train loader."""
+        return self._dataloader()
+
+    def test_dataloader(self):
+        """Get test loader."""
+        return self._dataloader()
 
     def test_step(self):
         # is there a validation step in RL????
         pass
 
-    def test_epoch_end(self, outputs: Union[EPOCH_OUTPUT, List[EPOCH_OUTPUT]]) -> None:
+    def test_epoch_end(self, outputs) -> None:
         pass
 
     def infer(self):

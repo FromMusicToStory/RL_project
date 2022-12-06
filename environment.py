@@ -5,12 +5,13 @@ from gym.utils import seeding
 from sklearn.metrics import classification_report, confusion_matrix, f1_score
 from torch.utils.data import Dataset
 
+
 class ClassifyEnv(gym.Env):
     def __init__(self, run_mode: str, dataset : Dataset):
         self.run_mode = run_mode    # run_mode: either train or test
         self.dataset = dataset
 
-        self.anv_data = [[data['encoded_output'], data['encoded_attention_mask']] for data in self.dataset]      # env_data : list of inputs
+        self.env_data = [[data['encoded_output'], data['encoded_attention_mask']] for data in self.dataset]      # env_data : list of inputs
         self.answer = [data['law_service_id'] for data in self.dataset]                # answer : list of answers corresponding to the input
         self.id = np.arange(len(self.dataset))
 
@@ -26,7 +27,7 @@ class ClassifyEnv(gym.Env):
         self.action_space = gym.spaces.Discrete(self.num_classes)
         print(self.action_space)
         self.step_ind = 0
-        self.y_preds = []                       # y_preds : list of predictions
+        self.y_preds = []           # y_preds : list of predictions
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -36,7 +37,6 @@ class ClassifyEnv(gym.Env):
         # Input : model's prediction value
         # Output : data, reward, is_terminal, info
         self.y_preds.append(prediction)
-        y_true_cur = []  # 정답값
         info = {}
         terminal = False
         truncated = False

@@ -12,6 +12,7 @@ log_every_n_steps: 100
 
 # optimizer
 lr: 5e-5
+gamms: 0.9
 
 # wandb logger
 project: RL

@@ -1,11 +1,13 @@
 # code reference : keras-rl/keras-rl/blob/master/rl/agents/dqn.py
 
 from random import randint
+from typing import Tuple
 
 import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F
+
 from environment import ClassifyEnv
 from buffer import Transition, ReplayBuffer, RLDataset
 

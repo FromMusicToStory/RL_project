@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 
 
 class ClassifyEnv(gym.Env):
-    def __init__(self, run_mode: str, dataset : Dataset):
+    def __init__(self, run_mode: str, dataset: Dataset):
         self.run_mode = run_mode    # run_mode: either train or test
         self.dataset = dataset
 

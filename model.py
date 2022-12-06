@@ -19,7 +19,7 @@ from buffer import ReplayBuffer, RLDataset
 class DQNClassification(pl.LightningModule):
     def __init__(self, hparams: Dict, run_mode: str):
         super(DQNClassification, self).__init__()
-        self.hparams = hparams
+        self.save_hyperparameters(hparams)
         self.model_name = hparams['model_name']
         self.dataset = KLAID_dataset(model_name=self.model_name, split='all')
         self.num_classes = len(self.dataset.get_class_num())

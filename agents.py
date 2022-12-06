@@ -1,4 +1,4 @@
-# code reference : core_rl/algos/common/agents.py
+# code reference : keras-rl/keras-rl/blob/master/rl/agents/dqn.py
 
 from random import randint
 
@@ -6,13 +6,15 @@ import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F
+from environment import ClassifyEnv
+from buffer import Transition, ReplayBuffer, RLDataset
 
 
 class Agent:
     """Basic agent that always returns 0"""
 
-    def __init__(self, net: nn.Module):
-        self.net = net
+    def __init__(self, model: nn.Module):
+        self.model = model
 
     def __call__(self, state: torch.Tensor, device: str) -> int:
         """
@@ -27,70 +29,56 @@ class Agent:
 
 
 class ValueAgent(Agent):
-    """Value based agent that returns an action based on the Q values from the network"""
-    def __init__(self, net: nn.Module, action_space: int, eps_start: float = 1.0,
-                 eps_end: float = 0.2, eps_frames: float = 1000):
-        super().__init__(net)
-        self.action_space = action_space
-        self.eps_start = eps_start
-        self.epsilon = eps_start
-        self.eps_end = eps_end
-        self.eps_frames = eps_frames
+    def __init__(self, env: ClassifyEnv, replay_buffer: ReplayBuffer, hparams: dict):
+        self.env = env
+        self.reset()
+        self.buffer = replay_buffer
+        self.state = self.env.reset()
+
+        self.eps_start = hparams['eps_start']
+        self.eps_end = hparams['eps_end']
+        self.frames = hparams['frames']
 
     def __call__(self, state: torch.Tensor, device: str) -> int:
-        """
-        Takes in the current state and returns the action based on the agents policy
-        Args:
-            state: current state of the environment
-            device: the device used for the current batch
-        Returns:
-            action defined by policy
-        """
-
-        if np.random.random() < self.epsilon:
+        if np.random.random() < self.eps_start:
             action = self.get_random_action()
         else:
             action = self.get_action(state, device)
-
         return action
 
     def get_random_action(self) -> int:
-        """returns a random action"""
-        action = randint(0, self.action_space - 1)
+        return randint(0, self.env.action_space.n - 1)
 
-        return action
-
-    def get_action(self, state: torch.Tensor, device: torch.device):
-        """
-            Returns the best action based on the Q values of the network
-            Args:
-                state: current state of the environment
-                device: the device used for the current batch
-            Returns:
-                action defined by Q values
-        """
+    def get_action(self, state: torch.Tensor, device: str) -> int:
         if not isinstance(state, torch.Tensor):
-            state = torch.tensor([state])
+            state = torch.Tensor([state]).float()
+        if device != 'cpu':
+            state = state.to(device)
 
-        if device.type != 'cpu':
-            state = state.cuda(device)
-
-        q_values = self.net(state)
+        q_values = self.model(state)
         _, action = torch.max(q_values, dim=1)
-        return int(action.item())
+        return action.item()
 
-    def update_epsilon(self, step: int) -> None:
-        """
-        Updates the epsilon value based on the current step
-        Args:
-            step: current global step
-        """
-        self.epsilon = max(self.eps_end, self.eps_start - (step + 1) / self.eps_frames)
+    @torch.no_grad()
+    def step(self, model: nn.Module,
+                  eps: float = 0.0,
+                  device: str = "cuda:0") -> Tuple[float, bool]:
+        action = self.get_action(model, eps, device)
+        new_state, reward, terminal, _, _  = self.env.step(action)
+        trans = Transition(self.state, action, reward, new_state, terminal)
+
+        self.buffer.append(trans)
+
+        self.state = new_state
+        if terminal:
+            self.reset()
+        return reward, terminal
+
+    def reset(self):
+        self.state = self.env.reset()
 
 
 class PolicyAgent(Agent):
-    """Policy based agent that returns an action based on the networks policy"""
-
     def __call__(self, state: torch.Tensor, device: str) -> int:
         """
         Takes in the current state and returns the action based on the agents policy

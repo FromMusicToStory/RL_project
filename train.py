@@ -3,13 +3,13 @@ import yaml
 import pytorch_lightning as pl
 from pytorch_lightning.loggers.wandb import WandbLogger
 
-from model import RLClassification
+from model import DQNClassification
 
 
 def main(config_path):
     config = yaml.safe_load(open(config_path))
 
-    model = RLClassification(config, run_mode='train')
+    model = DQNClassification(config, run_mode='train')
     model.train()
     lr_monitor = pl.callbacks.LearningRateMonitor()
     checkponiter = pl.callbacks.ModelCheckpoint(dir_path=config['checkpoint_path'],

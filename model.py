@@ -63,7 +63,7 @@ class DQNClassification(pl.LightningModule):
 
     def populate(self, hparams) -> None:
         # steps: number of steps to populate the replay buffer
-        for _ in range(hparams['steps']):
+        for _ in range(hparams['warm_start_steps']):
             self.agent.step(self.classification_model, hparams['eps'])
 
     def forward(self, batch):
@@ -87,7 +87,7 @@ class DQNClassification(pl.LightningModule):
         return self.criterion(state_action_values, expected_state_action_values)
 
     def configure_optimizers(self):
-        optimizer = AdamW(self.classification_model.parameters(), lr=self.hparams['lr'])
+        optimizer = AdamW(self.classification_model.parameters(), lr=float(self.hparams['lr']))
         return [optimizer]
 
     def get_epsilon(self, start, end, frames):
@@ -141,23 +141,23 @@ class DQNClassification(pl.LightningModule):
         return OrderedDict({'loss': loss, 'avg_reward': torch.tensor(self.avg_reward),
                             'log': log, 'progress_bar': status})
 
-    def _dataloader(self):
-        self.buffer = ReplayBuffer(self.capacity)
-        self.populate(self.hparams['warm_start'])
-
-        dataset = RLDataset(self.buffer, self.hparams['batch_size'])
+    def __dataloader(self):
+        dataset = RLDataset(replay_buffer=self.buffer)
         dataloader = DataLoader(dataset,
-                                batch_size=self.hparams['batch_size'], shuffle=True, num_workers=4)
+                                batch_size=self.hparams['batch_size'], num_workers=4)
+        # shuffle =True에서 오류 남 (ValueError: DataLoader with IterableDataset: expected unspecified shuffle option, but got shuffle=True)
+        # 어차피 env에서 random으로 data 불러오니까 여기서는 그냥 가져와도 될 듯?
+
         return dataloader
 
 
     def train_dataloader(self):
         """Get train loader."""
-        return self._dataloader()
+        return self.__dataloader()
 
     def test_dataloader(self):
         """Get test loader."""
-        return self._dataloader()
+        return self.__dataloader()
 
     def test_step(self):
         # is there a validation step in RL????

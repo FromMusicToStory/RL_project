@@ -1,4 +1,4 @@
-import numpy as np
+import random
 from typing import List, Dict
 import gym
 from gym.utils import seeding
@@ -12,7 +12,6 @@ class ClassifyEnv(gym.Env):
         self.dataset = dataset
         self.env_data = [[data['encoded_output'], data['encoded_attention_mask']] for data in self.dataset[:len(self.dataset)]][0]   # env_data : list of inputs
         self.answer = [data['law_service_id'] for data in self.dataset[:len(self.dataset)]][0]             # answer : list of answers corresponding to the input
-        self.id = np.arange(len(self.dataset))
 
         # 논문과 달리 Multi-class classification 문제이기 때문에,
         # majority class인지 minority class인지 저장하는 list가 필요함
@@ -69,7 +68,7 @@ class ClassifyEnv(gym.Env):
 
     def reset(self):
         if self.run_mode == 'train':
-            np.random.shuffle(self.id)
+            random.shuffle(self.env_data)
         self.step_ind = 0
         self.y_preds = []
 
@@ -82,4 +81,5 @@ if __name__ == "__main__":
     env = ClassifyEnv('train', dataset)
     print(len(env.answer))
     print(env.env_data[0][0])
+
 

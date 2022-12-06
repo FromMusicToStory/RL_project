@@ -64,7 +64,7 @@ class DQNClassification(pl.LightningModule):
     def forward(self, batch):
         # Input: environment state
         # Output: Q values
-        logits = self.classification_model(batch['encoded_output'], batch['encoded_attention_mask'])
+        logits = self.classification_model(batch[0], batch[1])
         predictions = torch.argmax(logits, dim=1)
         return predictions
 

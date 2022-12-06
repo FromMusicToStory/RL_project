@@ -10,9 +10,8 @@ class ClassifyEnv(gym.Env):
     def __init__(self, run_mode: str, dataset: Dataset):
         self.run_mode = run_mode    # run_mode: either train or test
         self.dataset = dataset
-
-        self.env_data = [[data['encoded_output'], data['encoded_attention_mask']] for data in self.dataset[:len(self.dataset)]]      # env_data : list of inputs
-        self.answer = [data['law_service_id'] for data in self.dataset[:len(self.dataset)]]                # answer : list of answers corresponding to the input
+        self.env_data = [[data['encoded_output'], data['encoded_attention_mask']] for data in self.dataset[:len(self.dataset)]][0]   # env_data : list of inputs
+        self.answer = [data['law_service_id'] for data in self.dataset[:len(self.dataset)]][0]             # answer : list of answers corresponding to the input
         self.id = np.arange(len(self.dataset))
 
         # 논문과 달리 Multi-class classification 문제이기 때문에,
@@ -22,12 +21,12 @@ class ClassifyEnv(gym.Env):
         self.minorities = minority_class.keys()
         self.imb_rate = majority_class             # imb_rate : imbalanced rates for each majority class; dict {key: class_num / value : imb_rate}
 
-        self.game_len = len(self.dataset)          # length of this episode = the number of data
-        self.num_classes = 177                     # num_classes : the number of classes
+        self.game_len = len(self.dataset)                              # length of this episode = the number of data
+        self.num_classes = len(list(set(self.answer)))                 # num_classes : the number of classes
         self.action_space = gym.spaces.Discrete(self.num_classes)
         print(self.action_space)
         self.step_ind = 0
-        self.y_preds = []           # y_preds : list of predictions
+        self.y_preds = []     # y_preds : list of predictions
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -74,12 +73,14 @@ class ClassifyEnv(gym.Env):
         self.step_ind = 0
         self.y_preds = []
 
-        return self.dataset[self.id[self.step_ind]]
+        return self.dataset[self.id][self.step_ind]
 
 
 if __name__ == "__main__":
     from dataset import KLAID_dataset
     dataset = KLAID_dataset(split='test')
     env = ClassifyEnv('train', dataset)
+    print(len(env.answer))
+    print(env.num_classes)
 
 

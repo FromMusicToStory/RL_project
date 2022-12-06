@@ -20,6 +20,16 @@ class KLAID_dataset(Dataset):
         else:
             self.dataset = self.dataset
 
+        self.encodings = []
+        for fact in self.dataset['fact']:
+            encoding = self.tokenizer.encode_plus(fact,
+                                      add_special_tokens=True,
+                                      max_length=self.max_len,
+                                      truncation=True,
+                                      padding='max_length',
+                                      return_tensors='pt')
+            self.encodings.append(encoding)
+
     def split_dataset(self, dataset, test_size=0.1):
         dict_ = dataset.train_test_split(test_size=test_size, shuffle=True)
         return dict_['train'], dict_['test']
@@ -50,19 +60,14 @@ class KLAID_dataset(Dataset):
         law_service_id = self.dataset[idx]['laws_service_id']
         law_service = self.dataset[idx]['laws_service']
         fact = self.dataset[idx]['fact']
+        encoded_output = [encoding['input_ids'].flatten() for encoding in self.encodings[idx]]
+        attention_mask = [encoding['attention_mask'].flatten() for encoding in self.encodings[idx]]
 
-        encoding = self.tokenizer.encode_plus(fact,
-                                              add_special_tokens=True,
-                                              max_length=self.max_len,
-                                              truncation=True,
-                                              padding='max_length',
-                                              return_tensors='pt')
-
-        return {'law_service_id': law_service_id,
+        return [{'law_service_id': law_service_id,
                 'law_service': law_service,
                 'fact': fact,
-                'encoded_output': encoding['input_ids'].flatten(),
-                'encoded_attention_mask': encoding['attention_mask'].flatten()}
+                'encoded_output': encoded_output,
+                'encoded_attention_mask': attention_mask}]
 
 
 if __name__ == '__main__':

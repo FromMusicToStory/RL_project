@@ -31,27 +31,23 @@ class Agent:
 
 
 class ValueAgent(Agent):
-    def __init__(self, env: ClassifyEnv, replay_buffer: ReplayBuffer, hparams: dict):
+    def __init__(self, env: ClassifyEnv, replay_buffer: ReplayBuffer):
         self.env = env
         self.reset()
         self.buffer = replay_buffer
         self.state = self.env.reset()
 
-        self.eps_start = hparams['eps_start']
-        self.eps_end = hparams['eps_end']
-        self.frames = hparams['frames']
-
-    def __call__(self, state: torch.Tensor, device: str) -> int:
-        if np.random.random() < self.eps_start:
+    def get_action(self, state: torch.Tensor, epsilon: float, device: str) -> int:
+        if np.random.random() < epsilon:
             action = self.get_random_action()
         else:
-            action = self.get_action(state, device)
+            action = self.get_normal_action(state, device)
         return action
 
     def get_random_action(self) -> int:
         return randint(0, self.env.action_space.n - 1)
 
-    def get_action(self, state: torch.Tensor, device: str) -> int:
+    def get_normal_action(self, state: torch.Tensor, device: str) -> int:
         if not isinstance(state, torch.Tensor):
             state = torch.Tensor([state]).float()
         if device != 'cpu':
@@ -59,13 +55,13 @@ class ValueAgent(Agent):
 
         q_values = self.model(state)
         _, action = torch.max(q_values, dim=1)
-        return action.item()
+        return int(action.item())
 
     @torch.no_grad()
     def step(self, model: nn.Module,
-                   eps: float = 0.0,
+                   epsilon: float,
                    device: str = "cuda:0") -> Tuple[float, bool]:
-        action = self.get_action(model, eps, device)
+        action = self.get_action(model, device)
         new_state, reward, terminal, _, _  = self.env.step(action)
         trans = Transition(self.state, action, reward, new_state, terminal)
 

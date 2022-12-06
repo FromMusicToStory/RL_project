@@ -59,7 +59,7 @@ class ClassifyEnv(gym.Env):
 
             terminal = True  # end of step
 
-        return [self.env_data[0][self.step_ind], self.Env_data[1][self.step_ind]], reward, terminal, truncated, info
+        return [self.env_data[0][self.step_ind], self.env_data[1][self.step_ind]], reward, terminal, truncated, info
 
     def get_metrics(self, y_pred, y_true):
         # weighted f1-score

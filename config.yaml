@@ -20,7 +20,6 @@ sync_rate: 10
 # eps
 eps_start: 1.0
 eps_end: 0.01
-frames: 1000
 
 # populate
 steps: 1000

@@ -21,20 +21,25 @@ class DQNClassification(pl.LightningModule):
         super(DQNClassification, self).__init__()
         self.save_hyperparameters(hparams)
         self.model_name = hparams['model_name']
-        self.dataset = KLAID_dataset(model_name=self.model_name, split='all')
+
+        if run_mode == 'train':
+            self.dataset = KLAID_dataset(model_name=self.model_name, split='train')
+        elif run_mode == 'test':
+            self.dataset = KLAID_dataset(model_name=self.model_name, split='test')
+
         self.num_classes = len(self.dataset.get_class_num())
         self.criterion = nn.MSELoss()
 
         self.env = ClassifyEnv(run_mode=run_mode, dataset=self.dataset)
         self.env.seed(42)
 
+        self.capacity = len(self.dataset)
+        self.buffer = ReplayBuffer(self.capacity)
+        self.agent = ValueAgent(self.env, self.buffer)
+
         self.net = None
         self.target_net = None
         self.build_networks()
-
-        self.capacity = len(self.dataset)
-        self.buffer = ReplayBuffer(self.capacity)
-        self.agent = ValueAgent(self.env, self.buffer, hparams)
 
         self.total_reward = 0
         self.avg_reward = 0
@@ -45,21 +50,21 @@ class DQNClassification(pl.LightningModule):
         self.episode_steps = 0
         self.total_episode_steps = 0
 
-        self.populate(self.hparams['warm_start'])
+        self.populate(self.hparams)
 
 
     def get_device(self, batch):
-        return batch['encoded_output'].device if torch.cuda.is_available() else 'cpu'
+        return batch[0].device if torch.cuda.is_available() else 'cpu'
 
     def build_networks(self):
         # Initializing the DQN network and the target network
         self.classification_model = Classifier(model_name=self.model_name, num_classes=self.num_classes)
         self.target_model = Classifier(model_name=self.model_name, num_classes=self.num_classes)
 
-    def populate(self, steps, hparams) -> None:
+    def populate(self, hparams) -> None:
         # steps: number of steps to populate the replay buffer
-        for _ in range(steps):
-            self.agent.step(self.classification_mode, hparams['eps'])
+        for _ in range(hparams['steps']):
+            self.agent.step(self.classification_model, hparams['eps'])
 
     def forward(self, batch):
         # Input: environment state
@@ -93,7 +98,7 @@ class DQNClassification(pl.LightningModule):
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], _) -> OrderedDict:
         device = self.get_device(batch)
-        epsilon = self.get_epsilon(self.hparams['epsilon_start'], self.hparams['epsilon_final'], self.hparams['frames'])
+        epsilon = self.get_epsilon(self.hparams['epsilon_start'], self.hparams['epsilon_final'], self.capacity)
         self.log('epsilon', epsilon)
 
         # Training

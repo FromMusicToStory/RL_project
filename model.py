@@ -35,36 +35,47 @@ class DQNClassification(pl.LightningModule):
         self.capacity = len(self.dataset)
         self.buffer = ReplayBuffer(self.capacity)
         self.agent = ValueAgent(self.env, self.buffer, batch_size=hparams['batch_size'])
+
         self.total_reward = 0
+        self.avg_reward = 0
+        self.reward_list = []
+
         self.episode_reward = 0
+        self.episode_count = 0
+        self.episode_steps = 0
+        self.total_episode_steps = 0
+
         self.populate(self.hparams['warm_start'])
 
 
-    def populate(self, warm_start: int) -> None:
-        # Populates the buffer with initial trasnsition
-        # warm_start: number of episodes to populate the buffer
-        if warm_start > 0:
-            for _ in range(warm_start):
-                self.agent.step(self.classification_model, epsilon=1.0)
+    def get_device(self, batch):
+        return batch['encoded_output'].device if torch.cuda.is_available() else 'cpu'
 
     def build_networks(self):
         # Initializing the DQN network and the target network
         self.classification_model = Classifier(model_name=self.model_name, num_classes=self.num_classes)
         self.target_model = Classifier(model_name=self.model_name, num_classes=self.num_classes)
 
+    def populate(self, steps, hparams) -> None:
+        # steps: number of steps to populate the replay buffer
+        for _ in range(steps):
+            self.agent.step(self.classification_mode, hparams['eps'])
+
     def forward(self, batch):
-        # InputL environment state
+        # Input: environment state
         # Output: Q values
         logits = self.classification_model(batch['encoded_output'], batch['encoded_attention_mask'])
         predictions = torch.argmax(logits, dim=1)
         return predictions
 
     def loss(self, batch):
-        states, actions, rewards, next_states, dones = batch
+        # Input: current batch (states, actions, rewards, next states, terminals) of replay buffer
+        # Output: loss
+        states, actions, rewards, next_states, terminals = batch
         state_action_values = self.classification_model(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
         with torch.no_grad():
             next_state_values = self.target_model(next_states),max(1)[0]
-            next_state_values[dones] = 0.0
+            next_state_values[terminals] = 0.0
             next_state_values = next_state_values.detach()
         expected_state_action_values = next_state_values * self.hparams['gamma'] + rewards
 
@@ -81,15 +92,14 @@ class DQNClassification(pl.LightningModule):
         return start - (self.global_step / frames) * (start - end)
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], _) -> OrderedDict:
-        epsilon = self.get_epsilon(self.hparams['epsilon_start'], self.hparams['epsilon_final'], self.hparams['epsilon_frames'])
+        device = self.get_device(batch)
+        epsilon = self.get_epsilon(self.hparams['epsilon_start'], self.hparams['epsilon_final'], self.hparams['frames'])
         self.log('epsilon', epsilon)
 
-        exp, reward, done = self.source.step()
-        reward, done = self.agent.play
-        self.buffer.append(exp)
-
+        # Training
+        reward, terminal = self.agent.step(self.classification_model, epsilon, device)
         self.episode_reward += reward
-        self.episode_steps += 1
+        self.log('episode_reward', self.episode_reward)
 
         # calculates training loss
         loss = self.loss(batch)
@@ -97,7 +107,7 @@ class DQNClassification(pl.LightningModule):
         if self.trainer.use_dp or self.trainer.use_ddp2:
             loss = loss.unsqueeze(0)
 
-        if done:
+        if terminal:
             self.total_reward = self.episode_reward
             self.reward_list.append(self.total_reward)
             self.avg_reward = sum(self.reward_list[-100:]) / 100
@@ -107,8 +117,8 @@ class DQNClassification(pl.LightningModule):
             self.episode_steps = 0
 
         # Soft update of target network
-        if self.global_step % self.hparams.sync_rate == 0:
-            self.target_net.load_state_dict(self.net.state_dict())
+        if self.global_step % self.hparams['sync_rate'] == 0:
+            self.target_model.load_state_dict(self.classification_model.state_dict())
 
         log = {'total_reward': torch.tensor(self.total_reward).to(self.device),
                'avg_reward': torch.tensor(self.avg_reward),

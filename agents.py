@@ -61,8 +61,8 @@ class ValueAgent(Agent):
 
     @torch.no_grad()
     def step(self, model: nn.Module,
-                  eps: float = 0.0,
-                  device: str = "cuda:0") -> Tuple[float, bool]:
+                   eps: float = 0.0,
+                   device: str = "cuda:0") -> Tuple[float, bool]:
         action = self.get_action(model, eps, device)
         new_state, reward, terminal, _, _  = self.env.step(action)
         trans = Transition(self.state, action, reward, new_state, terminal)

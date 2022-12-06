@@ -41,12 +41,12 @@ class ClassifyEnv(gym.Env):
         truncated = False
         answer_t = self.answer[self.step_ind]  # answer of this step
         if prediction == answer_t:
-            if answer_t in self.majorities:
+            if answer_t in self.minorities:
                 reward = 1
             else:
                 reward = 1.0 * self.imb_rate[answer_t]
         else:
-            if answer_t in self.majorities:
+            if answer_t in self.minorities:
                 reward = -1
                 if self.run_mode == 'train':
                     truncated = True

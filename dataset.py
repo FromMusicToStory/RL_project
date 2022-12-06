@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 from transformers import AutoTokenizer
 import statistics
 from collections import Counter
-
+from tqdm import tqdm
 
 class KLAID_dataset(Dataset):
     def __init__(self, model_name='klue/roberta-base', split='all'):
@@ -21,7 +21,8 @@ class KLAID_dataset(Dataset):
             self.dataset = self.dataset
 
         self.encodings = []
-        for fact in self.dataset['fact']:
+        print("dataset preparing for faster loading")
+        for fact in tqdm(self.dataset['fact']):
             encoding = self.tokenizer.encode_plus(fact,
                                       add_special_tokens=True,
                                       max_length=self.max_len,

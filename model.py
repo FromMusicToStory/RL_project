@@ -33,13 +33,13 @@ class DQNClassification(pl.LightningModule):
         self.env = ClassifyEnv(run_mode=run_mode, dataset=self.dataset)
         self.env.seed(42)
 
-        self.capacity = len(self.dataset)
-        self.buffer = ReplayBuffer(self.capacity)
-        self.agent = ValueAgent(self.env, self.buffer)
-
         self.net = None
         self.target_net = None
         self.build_networks()
+
+        self.capacity = len(self.dataset)
+        self.buffer = ReplayBuffer(self.capacity)
+        self.agent = ValueAgent(self.classification_model, self.env, self.buffer)
 
         self.total_reward = 0
         self.avg_reward = 0

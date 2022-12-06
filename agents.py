@@ -31,7 +31,8 @@ class Agent:
 
 
 class ValueAgent(Agent):
-    def __init__(self, env: ClassifyEnv, replay_buffer: ReplayBuffer):
+    def __init__(self, model, env: ClassifyEnv, replay_buffer: ReplayBuffer):
+        self.model = model
         self.env = env
         self.reset()
         self.buffer = replay_buffer

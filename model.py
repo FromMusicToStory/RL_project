@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 from torch.optim import AdamW
 import pytorch_lightning as pl
+import wandb
 
 from dataset import KLAID_dataset
 from network import Classifier
@@ -107,7 +108,7 @@ class DQNClassification(pl.LightningModule):
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], _) -> OrderedDict:
         device = self.get_device(batch)
         epsilon = self.get_epsilon(self.hparams['eps_start'], self.hparams['eps_end'], self.capacity)
-        self.log('epsilon', epsilon)
+        wandb.log({'train/epsilon':epsilon })
 
         # Training
         # batch로 부터 state를 받아서 agent에 넘기고
@@ -135,7 +136,7 @@ class DQNClassification(pl.LightningModule):
         if self.global_step % self.hparams['sync_rate'] == 0:
             self.target_model.load_state_dict(self.classification_model.state_dict())
 
-        self.log('episode_reward', self.episode_reward)
+
         log = {'total_reward': torch.tensor(self.total_reward).to(self.device),
                'avg_reward': torch.tensor(self.avg_reward),
                'train_loss': loss,
@@ -151,6 +152,15 @@ class DQNClassification(pl.LightningModule):
 
         return OrderedDict({'loss': loss, 'avg_reward': torch.tensor(self.avg_reward),
                             'log': log, 'progress_bar': status})
+
+    def training_epoch_end(self, outputs) -> None:
+        wandb.log({"train/loss": outputs['loss']})
+
+        wandb.log({"train/avg_reward": outputs['avg_reward']})
+
+        wandb.log({"train/episode_steps": outputs['progress_bar']['episode_steps']})
+        wandb.log({"train/total_reward": outputs['progress_bar']['total_reward'].detach().cpu().numpy()})
+
 
 
     def __dataloader(self):

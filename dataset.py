@@ -61,14 +61,19 @@ class KLAID_dataset(Dataset):
         law_service_id = self.dataset[idx]['laws_service_id']
         law_service = self.dataset[idx]['laws_service']
         fact = self.dataset[idx]['fact']
-        encoded_output = [encoding['input_ids'].flatten() for encoding in self.encodings[idx]]
-        attention_mask = [encoding['attention_mask'].flatten() for encoding in self.encodings[idx]]
+        tmp = self.encodings[idx]
+        if isinstance(tmp, list):
+            tmp = tmp[0]
+        encoded_output = tmp['input_ids']
+        attention_mask = tmp['attention_mask']
+        # encoded_output = [encoding['input_ids'].flatten() for encoding in self.encodings[idx]]
+        # attention_mask = [encoding['attention_mask'].flatten() for encoding in self.encodings[idx]]
 
-        return [{'law_service_id': law_service_id,
+        return {'law_service_id': law_service_id,
                 'law_service': law_service,
                 'fact': fact,
                 'encoded_output': encoded_output,
-                'encoded_attention_mask': attention_mask}]
+                'encoded_attention_mask': attention_mask}
 
 
 if __name__ == '__main__':

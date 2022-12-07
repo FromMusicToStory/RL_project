@@ -15,6 +15,7 @@ from environment import ClassifyEnv
 from agents import ValueAgent
 from buffer import ReplayBuffer, RLDataset
 
+os.environ['TOKENIZERS_PARALLELISM']='FALSE'
 
 class DQNClassification(pl.LightningModule):
     def __init__(self, hparams: Dict, run_mode: str):
@@ -58,13 +59,14 @@ class DQNClassification(pl.LightningModule):
 
     def build_networks(self):
         # Initializing the DQN network and the target network
-        self.classification_model = Classifier(model_name=self.model_name, num_classes=self.num_classes)
-        self.target_model = Classifier(model_name=self.model_name, num_classes=self.num_classes)
+        self.classification_model = Classifier(model_name=self.model_name, num_classes=self.num_classes).to(self.device)
+        self.target_model = Classifier(model_name=self.model_name, num_classes=self.num_classes).to(self.device)
 
     def populate(self, hparams) -> None:
         # steps: number of steps to populate the replay buffer
+        warm_up_data = self.env.env_data[:hparams['warm_start_steps']]
         for _ in range(hparams['warm_start_steps']):
-            self.agent.step(self.classification_model, hparams['eps'])
+            self.agent.step(warm_up_data[0], warm_up_data[1], hparams['eps'])
 
     def forward(self, batch):
         # Input: environment state
@@ -73,13 +75,19 @@ class DQNClassification(pl.LightningModule):
         predictions = torch.argmax(logits, dim=1)
         return predictions
 
+    def get_attention_mask(self, batched_input):
+        mask = []
+        for x in batched_input:
+            print(x)
+
+
     def loss(self, batch):
         # Input: current batch (states, actions, rewards, next states, terminals) of replay buffer
         # Output: loss
-        states, actions, rewards, next_states, terminals = batch
-        state_action_values = self.classification_model(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
+        states, actions, rewards, next_states, terminals, cur_attn, next_attn = batch
+        state_action_values = self.classification_model(input_ids=states, attention_mask=cur_attn).gather(1, actions.unsqueeze(-1)).squeeze(-1)
         with torch.no_grad():
-            next_state_values = self.target_model(next_states),max(1)[0]
+            next_state_values = self.target_model(input_ids=next_states, attention_mask=next_attn).max(1)[0]
             next_state_values[terminals] = 0.0
             next_state_values = next_state_values.detach()
         expected_state_action_values = next_state_values * self.hparams['gamma'] + rewards
@@ -106,9 +114,10 @@ class DQNClassification(pl.LightningModule):
         # agent로 부터 prediction result, reward를 받음
         # agent로부터 받음 result로 MSE loss 를 계산하도록 수정
         #   env 로부터 answer를 받아와서 -> agent에서 true answer 받아서 MSE loss 계산
-        reward, terminal = self.agent.step(state, epsilon, device)
+        states, _, _, _, _, attention_mask, _ = batch
+        reward, terminal = self.agent.step(states, attention_mask, epsilon, device)
         self.episode_reward += reward
-        self.log('episode_reward', self.episode_reward)
+
 
         # calculates training loss
         loss = self.loss(batch)
@@ -128,7 +137,7 @@ class DQNClassification(pl.LightningModule):
         # Soft update of target network
         if self.global_step % self.hparams['sync_rate'] == 0:
             self.target_model.load_state_dict(self.classification_model.state_dict())
-
+        self.log('episode_reward', self.episode_reward)
         log = {'total_reward': torch.tensor(self.total_reward).to(self.device),
                'avg_reward': torch.tensor(self.avg_reward),
                'train_loss': loss,
@@ -146,7 +155,7 @@ class DQNClassification(pl.LightningModule):
                             'log': log, 'progress_bar': status})
 
     def __dataloader(self):
-        dataset = RLDataset(replay_buffer=self.buffer)
+        dataset = RLDataset(replay_buffer=self.buffer, batch_size=self.hparams['batch_size'])
         dataloader = DataLoader(dataset,
                                 batch_size=self.hparams['batch_size'], num_workers=4)
         # shuffle =True에서 오류 남 (ValueError: DataLoader with IterableDataset: expected unspecified shuffle option, but got shuffle=True)

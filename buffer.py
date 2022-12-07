@@ -21,23 +21,25 @@ class ReplayBuffer:
         # transition = (state, action, reward, next_state, terminal)
         self.buffer.append(transition)
 
-    def sample(self) -> Tuple:
-        idx = np.random.choice(len(self.buffer), replace=False)
-        state, action, reward, next_state, terminal = self.buffer[idx]
-        state = state[0]  # states : list of input_ids, attention_mask, only get input_ids
-        next_state = next_state[0]
-        return state, \
-               torch.tensor(action), \
-               torch.tensor(reward, dtype=torch.float), \
-               next_state, \
-               torch.tensor(terminal, dtype=torch.uint8)    # state, next state are already tensors
+    def sample(self, batch_size) -> Tuple:
+        indices = np.random.choice(len(self.buffer), batch_size, replace=False)
+        states, actions, rewards, next_states, terminals = zip(*(self.buffer[idx] for idx in indices))
+        # state, next state are already tensors
+        return torch.cat([x[0] for x in states]), \
+               torch.tensor(actions), \
+               torch.tensor(rewards), \
+               torch.cat([x[0] for x in next_states]), \
+               torch.tensor(terminals), torch.cat([x[1] for x in states]), torch.cat([x[1] for x in next_states])
+
 
 
 
 class RLDataset(IterableDataset):
-    def __init__(self, replay_buffer: ReplayBuffer):
+    def __init__(self, replay_buffer: ReplayBuffer, batch_size: int):
         self.replay_buffer = replay_buffer
+        self.batch_size = batch_size
 
     def __iter__(self) -> Iterator[Tuple]:
-        while True:
-            yield self.replay_buffer.sample()
+        states, actions, rewards, next_states, terminals, cur_atts, next_atts = self.replay_buffer.sample(batch_size=self.batch_size)
+        for i in range(len(terminals)):
+            yield states[i], actions[i], rewards[i], next_states[i], terminals[i], cur_atts[i], next_atts[i]

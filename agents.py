@@ -38,30 +38,30 @@ class ValueAgent(Agent):
         self.buffer = replay_buffer
         self.state = self.env.reset()
 
-    def get_action(self, state: torch.Tensor, epsilon: float, device: str) -> int:
+    def get_action(self, state: torch.Tensor, attention_mask : torch.Tensor, epsilon: float, device: str) -> int:
         if np.random.random() < epsilon:
             action = self.get_random_action()
         else:
-            action = self.get_normal_action(state, device)
+            action = self.get_normal_action(state, attention_mask, device)
         return action
 
     def get_random_action(self) -> int:
         return randint(0, self.env.action_space.n - 1)
 
-    def get_normal_action(self, state: torch.Tensor, device: str) -> int:
+    def get_normal_action(self, state: torch.Tensor, attention_mask : torch.Tensor, device: str) -> int:
         if not isinstance(state, torch.Tensor):
             state = torch.Tensor([state]).float()
         if device != 'cpu':
             state = state.to(device)
 
-        q_values = self.model(state)    # classification model
+        q_values = self.model(input_ids=state, attention_mask=attention_mask)    # classification model
         _, action = torch.max(q_values, dim=1)
         return int(action.item())
 
     @torch.no_grad()
-    def step(self, state, epsilon: float, device: str = "cuda:0") -> Tuple[float, bool]:
+    def step(self, state, attention_mask, epsilon: float, device: str = "cuda:0") -> Tuple[float, bool]:
         # Batch로 작동하도록 수정
-        action = self.get_action(state, epsilon, device)
+        action = self.get_action(state, attention_mask, epsilon, device)
         new_state, reward, terminal, _, _ = self.env.step(action)
         trans = Transition(self.state, action, reward, new_state, terminal)
 

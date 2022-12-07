@@ -17,5 +17,19 @@ We used the [KLAID](https://huggingface.co/datasets/lawcompany/KLAID) dataset.
 - [ ]  DQN 을 다른 걸로 바꾸기
 - [x]  KLAID 데이터셋 프로세싱하는 dataset.py 만들기 (data loading 용) => hugginface dataset 사용하면 됨
 
+
+## Installation
+
+```
+pip install -r requirements.txt
+```
+
+## Training
+
+```
+mkdir checkpoint
+python train.py
+```
+
 ## References
 [Pytorch-Lightning Tutorial For DQN](https://pytorch-lightning.readthedocs.io/en/stable/notebooks/lightning_examples/reinforce-learning-DQN.html)

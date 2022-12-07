@@ -23,7 +23,7 @@ def main(config_path):
         accumulate_grad_batches=config['accumulate_grad_batches'],
         log_every_n_steps=config['log_every_n_steps'],
         max_epochs=config['max_epochs'],
-        logger=WandbLogger(config['project']),
+        logger=WandbLogger(project=config['project'], name=config['name']),
         callbacks=[lr_monitor, checkponiter])
     trainer.fit(model)
 

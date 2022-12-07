@@ -137,29 +137,45 @@ class DQNClassification(pl.LightningModule):
             self.target_model.load_state_dict(self.classification_model.state_dict())
 
 
-        log = {'total_reward': torch.tensor(self.total_reward).to(self.device),
-               'avg_reward': torch.tensor(self.avg_reward),
+        log = {'total_reward': self.total_reward,
+               'avg_reward': self.avg_reward,
                'train_loss': loss,
-               'episode_steps': torch.tensor(self.total_episode_steps)
+               'episode_steps': self.total_episode_steps
                }
-        status = {'steps': torch.tensor(self.global_step).to(self.device),
-                  'avg_reward': torch.tensor(self.avg_reward),
-                  'total_reward': torch.tensor(self.total_reward).to(self.device),
+        status = {'steps': self.global_step,
+                  'avg_reward': self.avg_reward,
+                  'total_reward': self.total_reward,
                   'episodes': self.episode_count,
                   'episode_steps': self.episode_steps,
                   'epsilon': epsilon
                   }
 
-        return OrderedDict({'loss': loss, 'avg_reward': torch.tensor(self.avg_reward),
-                            'log': log, 'progress_bar': status})
+        return {
+            'loss' : loss,
+            'avg_reward' : torch.tensor(self.avg_reward, dtype=float),
+            'total_reward' : torch.tensor(self.total_reward, dtype=float),
+            'episode_steps' : torch.tensor(self.episode_steps, dtype=float),
+            'total_reward' : torch.tensor(self.total_reward, dtype=float)
+        }
 
     def training_epoch_end(self, outputs) -> None:
-        wandb.log({"train/loss": outputs['loss']})
+        collect = lambda key: torch.stack([x[key] for x in outputs]).mean()
+        loss = collect('loss')
+        avg_reward = collect('avg_reward')
+        episode_steps = collect('episode_steps')
+        total_reward = collect('total_reward')
 
-        wandb.log({"train/avg_reward": outputs['avg_reward']})
+        wandb.log({"train/loss": loss})
 
-        wandb.log({"train/episode_steps": outputs['progress_bar']['episode_steps']})
-        wandb.log({"train/total_reward": outputs['progress_bar']['total_reward'].detach().cpu().numpy()})
+        wandb.log({"train/avg_reward": avg_reward})
+
+        wandb.log({"train/episode_steps": episode_steps})
+        wandb.log({"train/total_reward": total_reward})
+
+        # reset episode related varaibles
+        self.episode_reward = 0
+        self.episode_count = 0
+        self.episode_steps = 0
 
 
 

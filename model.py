@@ -15,7 +15,7 @@ from dataset import KLAID_dataset
 from network import Classifier
 from environment import ClassifyEnv
 from agents import ValueAgent
-from buffer import ReplayBuffer, RLDataset, worker_init_fn
+from buffer import ReplayBuffer, RLDataset
 
 os.environ['TOKENIZERS_PARALLELISM']='FALSE'
 
@@ -33,6 +33,7 @@ class DQNClassification(pl.LightningModule):
         self.num_classes = len(self.dataset.get_class_num())
         self.criterion = nn.MSELoss()
 
+        print("\nInitializing the environment...")
         self.env = ClassifyEnv(run_mode=run_mode, dataset=self.dataset)
         self.env.seed(42)
 
@@ -103,7 +104,7 @@ class DQNClassification(pl.LightningModule):
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], _) -> OrderedDict:
         device = self.get_device(batch)
         epsilon = self.get_epsilon(self.hparams['eps_start'], self.hparams['eps_end'], self.capacity)
-        wandb.log({'train/epsilon':epsilon})
+        wandb.log({'train/epsilon': epsilon})
 
         reward, terminal = self.agent.step(self.classification_model, epsilon, device)
         self.episode_reward += reward
@@ -112,6 +113,7 @@ class DQNClassification(pl.LightningModule):
 
         # calculates training loss
         loss = self.loss(batch)
+        wandb.log({'train/loss': loss})
 
         if terminal:
             self.total_reward = self.episode_reward
@@ -145,7 +147,9 @@ class DQNClassification(pl.LightningModule):
             'avg_reward' : torch.tensor(self.avg_reward, dtype=float),
             'total_reward' : torch.tensor(self.total_reward, dtype=float),
             'episode_steps' : torch.tensor(self.episode_steps, dtype=float),
-            'total_reward' : torch.tensor(self.total_reward, dtype=float)
+            'total_reward' : torch.tensor(self.total_reward, dtype=float),
+            'log' : log,
+            'progress_bar' : status
         }
 
     def training_epoch_end(self, outputs) -> None:
@@ -171,8 +175,8 @@ class DQNClassification(pl.LightningModule):
     def __dataloader(self):
         dataset = RLDataset(replay_buffer=self.buffer, buffer_size=self.capacity)
         dataloader = DataLoader(dataset,
-                                batch_size=self.hparams['batch_size'], num_workers=8,
-                                worker_init_fn=worker_init_fn)
+                                batch_size=self.hparams['batch_size'], num_workers=self.hparams['num_workers'])
+
         return dataloader
 
     def train_dataloader(self):

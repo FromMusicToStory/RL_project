@@ -122,9 +122,6 @@ class DQNClassification(pl.LightningModule):
         # calculates training loss
         loss = self.loss(batch)
 
-        if self.trainer.use_dp or self.trainer.use_ddp2:
-            loss = loss.unsqueeze(0)
-
         if terminal:
             self.total_reward = self.episode_reward
             self.reward_list.append(self.total_reward)
@@ -137,6 +134,7 @@ class DQNClassification(pl.LightningModule):
         # Soft update of target network
         if self.global_step % self.hparams['sync_rate'] == 0:
             self.target_model.load_state_dict(self.classification_model.state_dict())
+
         self.log('episode_reward', self.episode_reward)
         log = {'total_reward': torch.tensor(self.total_reward).to(self.device),
                'avg_reward': torch.tensor(self.avg_reward),
@@ -148,11 +146,12 @@ class DQNClassification(pl.LightningModule):
                   'total_reward': torch.tensor(self.total_reward).to(self.device),
                   'episodes': self.episode_count,
                   'episode_steps': self.episode_steps,
-                  'epsilon': self.agent.epsilon
+                  'epsilon': epsilon
                   }
 
         return OrderedDict({'loss': loss, 'avg_reward': torch.tensor(self.avg_reward),
                             'log': log, 'progress_bar': status})
+
 
     def __dataloader(self):
         dataset = RLDataset(replay_buffer=self.buffer, batch_size=self.hparams['batch_size'])

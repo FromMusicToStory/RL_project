@@ -15,7 +15,7 @@ checkpoint_path: "checkpoint"
 lr: 5e-5
 
 # hyperparameter for RL
-gamms: 0.9
+gamma: 0.9
 sync_rate: 10
 
 # eps

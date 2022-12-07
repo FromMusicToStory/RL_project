@@ -9,12 +9,13 @@ import torch.nn as nn
 from torch.optim import AdamW
 import pytorch_lightning as pl
 import wandb
+from tqdm import tqdm
 
 from dataset import KLAID_dataset
 from network import Classifier
 from environment import ClassifyEnv
 from agents import ValueAgent
-from buffer import ReplayBuffer, RLDataset
+from buffer import ReplayBuffer, RLDataset, worker_init_fn
 
 os.environ['TOKENIZERS_PARALLELISM']='FALSE'
 
@@ -41,7 +42,7 @@ class DQNClassification(pl.LightningModule):
 
         self.capacity = len(self.dataset)
         self.buffer = ReplayBuffer(self.capacity)
-        self.agent = ValueAgent(self.classification_model, self.env, self.buffer)
+        self.agent = ValueAgent(self.env, self.buffer)
 
         self.total_reward = 0
         self.avg_reward = 0
@@ -56,7 +57,7 @@ class DQNClassification(pl.LightningModule):
 
 
     def get_device(self, batch):
-        return batch[0].device if torch.cuda.is_available() else 'cpu'
+        return batch[0][0].device if torch.cuda.is_available() else 'cpu'
 
     def build_networks(self):
         # Initializing the DQN network and the target network
@@ -65,9 +66,9 @@ class DQNClassification(pl.LightningModule):
 
     def populate(self, hparams) -> None:
         # steps: number of steps to populate the replay buffer
-        warm_up_data = self.env.env_data[:hparams['warm_start_steps']]
-        for _ in range(hparams['warm_start_steps']):
-            self.agent.step(warm_up_data[0], warm_up_data[1], hparams['eps'])
+        print("\nPopulating the replay buffer...")
+        for _ in tqdm(range(len(self.env.env_data))):
+            self.agent.step(self.classification_model, hparams['initial_eps'])
 
     def forward(self, batch):
         # Input: environment state
@@ -76,19 +77,13 @@ class DQNClassification(pl.LightningModule):
         predictions = torch.argmax(logits, dim=1)
         return predictions
 
-    def get_attention_mask(self, batched_input):
-        mask = []
-        for x in batched_input:
-            print(x)
-
-
     def loss(self, batch):
         # Input: current batch (states, actions, rewards, next states, terminals) of replay buffer
         # Output: loss
-        states, actions, rewards, next_states, terminals, cur_attn, next_attn = batch
-        state_action_values = self.classification_model(input_ids=states, attention_mask=cur_attn).gather(1, actions.unsqueeze(-1)).squeeze(-1)
+        states, actions, rewards, next_states, terminals = batch
+        state_action_values = self.classification_model(input_ids=states[0], attention_mask=states[1]).gather(1, actions.unsqueeze(-1)).squeeze(-1)
         with torch.no_grad():
-            next_state_values = self.target_model(input_ids=next_states, attention_mask=next_attn).max(1)[0]
+            next_state_values = self.target_model(input_ids=states[0], attention_mask=states[1]).max(1)[0]
             next_state_values[terminals] = 0.0
             next_state_values = next_state_values.detach()
         expected_state_action_values = next_state_values * self.hparams['gamma'] + rewards
@@ -108,17 +103,12 @@ class DQNClassification(pl.LightningModule):
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], _) -> OrderedDict:
         device = self.get_device(batch)
         epsilon = self.get_epsilon(self.hparams['eps_start'], self.hparams['eps_end'], self.capacity)
-        wandb.log({'train/epsilon':epsilon })
+        wandb.log({'train/epsilon':epsilon})
 
-        # Training
-        # batch로 부터 state를 받아서 agent에 넘기고
-        # agent로 부터 prediction result, reward를 받음
-        # agent로부터 받음 result로 MSE loss 를 계산하도록 수정
-        #   env 로부터 answer를 받아와서 -> agent에서 true answer 받아서 MSE loss 계산
-        states, _, _, _, _, attention_mask, _ = batch
-        reward, terminal = self.agent.step(states, attention_mask, epsilon, device)
+        reward, terminal = self.agent.step(self.classification_model, epsilon, device)
         self.episode_reward += reward
-
+        self.episode_steps += 1
+        wandb.log({'train/episode_reward': self.episode_reward})
 
         # calculates training loss
         loss = self.loss(batch)
@@ -172,22 +162,18 @@ class DQNClassification(pl.LightningModule):
         wandb.log({"train/episode_steps": episode_steps})
         wandb.log({"train/total_reward": total_reward})
 
-        # reset episode related varaibles
+        # reset episode related variables
         self.episode_reward = 0
         self.episode_count = 0
         self.episode_steps = 0
 
 
-
     def __dataloader(self):
-        dataset = RLDataset(replay_buffer=self.buffer, batch_size=self.hparams['batch_size'])
+        dataset = RLDataset(replay_buffer=self.buffer, buffer_size=self.capacity)
         dataloader = DataLoader(dataset,
-                                batch_size=self.hparams['batch_size'], num_workers=4)
-        # shuffle =True에서 오류 남 (ValueError: DataLoader with IterableDataset: expected unspecified shuffle option, but got shuffle=True)
-        # 어차피 env에서 random으로 data 불러오니까 여기서는 그냥 가져와도 될 듯?
-
+                                batch_size=self.hparams['batch_size'], num_workers=8,
+                                worker_init_fn=worker_init_fn)
         return dataloader
-
 
     def train_dataloader(self):
         """Get train loader."""

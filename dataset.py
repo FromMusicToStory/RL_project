@@ -72,8 +72,8 @@ class KLAID_dataset(Dataset):
         return {'law_service_id': law_service_id,
                 'law_service': law_service,
                 'fact': fact,
-                'encoded_output': encoded_output,
-                'encoded_attention_mask': attention_mask}
+                'encoded_output': encoded_output.flatten(),
+                'encoded_attention_mask': attention_mask.flatten()}
 
 
 if __name__ == '__main__':

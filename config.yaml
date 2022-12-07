@@ -23,8 +23,7 @@ eps_start: 1.0
 eps_end: 0.01
 
 # populate
-warm_start_steps: 1000
-eps: 1.0
+initial_eps: 1.0
 
 # wandb logger
 project: RL

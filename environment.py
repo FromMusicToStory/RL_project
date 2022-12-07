@@ -27,7 +27,7 @@ class ClassifyEnv(gym.Env):
         self.num_classes = len(list(set(self.answer)))                 # num_classes : the number of classes
         self.action_space = gym.spaces.Discrete(self.num_classes)
         print(self.action_space)
-        self.step_ind = 0
+        self.step_id = 0
         self.y_preds = []     # y_preds : list of predictions
 
     def seed(self, seed=None):
@@ -41,7 +41,7 @@ class ClassifyEnv(gym.Env):
         info = {}
         terminal = False
         truncated = False
-        answer_t = self.answer[self.step_ind]  # answer of this step
+        answer_t = self.answer[self.step_id]  # answer of this step
         if prediction == answer_t:
             if answer_t in self.minorities:
                 reward = 1
@@ -54,15 +54,15 @@ class ClassifyEnv(gym.Env):
                     truncated = True
             else:
                 reward = -1.0 * self.imb_rate[answer_t]
-        self.step_ind += 1
+        self.step_id += 1
 
-        if self.step_ind == self.game_len - 1:
-            y_true_cur = self.answer[self.step_id]
-            info['fmeasure'] = self.get_metrics(self.y_preds, y_true_cur[:self.step_ind])
+        if self.step_id == self.game_len - 1:
+            y_true_cur = self.answer[:self.step_id]
+            info['fmeasure'] = self.get_metrics(self.y_preds, y_true_cur)
 
             terminal = True  # end of step
 
-        return [self.env_data[self.step_ind][0], self.env_data[self.step_ind][1]], reward, terminal, truncated, info
+        return (self.env_data[self.step_id][0], self.env_data[self.step_id][1]), reward, terminal, truncated, info
 
     def get_metrics(self, y_pred, y_true):
         # weighted f1-score
@@ -72,10 +72,10 @@ class ClassifyEnv(gym.Env):
     def reset(self):
         if self.run_mode == 'train':
             random.shuffle(self.env_data)
-        self.step_ind = 0
+        self.step_id = 0
         self.y_preds = []
 
-        return self.env_data[self.step_ind]     # tuple
+        return self.env_data[self.step_id]     # tuple
 
 
 if __name__ == "__main__":
@@ -83,6 +83,6 @@ if __name__ == "__main__":
     dataset = KLAID_dataset(split='test')
     env = ClassifyEnv('train', dataset)
     print(len(env.answer))
-    print(env.env_data[0][0])
+    print(env.env_data[0])
 
 

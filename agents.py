@@ -31,37 +31,39 @@ class Agent:
 
 
 class ValueAgent(Agent):
-    def __init__(self, model, env: ClassifyEnv, replay_buffer: ReplayBuffer):
-        self.model = model
+    def __init__(self, env: ClassifyEnv, replay_buffer: ReplayBuffer):
         self.env = env
         self.reset()
         self.buffer = replay_buffer
         self.state = self.env.reset()
 
-    def get_action(self, state: torch.Tensor, attention_mask : torch.Tensor, epsilon: float, device: str) -> int:
+    def get_action(self, model: nn.Module, state: torch.Tensor, epsilon: float, device: str) -> int:
         if np.random.random() < epsilon:
             action = self.get_random_action()
         else:
-            action = self.get_normal_action(state, attention_mask, device)
+            action = self.get_normal_action(model, state, device)
         return action
 
     def get_random_action(self) -> int:
         return randint(0, self.env.action_space.n - 1)
 
-    def get_normal_action(self, state: torch.Tensor, attention_mask : torch.Tensor, device: str) -> int:
-        if not isinstance(state, torch.Tensor):
-            state = torch.Tensor([state]).float()
-        if device != 'cpu':
-            state = state.to(device)
+    def get_normal_action(self, model: nn.Module, state: torch.Tensor, device: str) -> int:
+        input_id, attention_mask = state[0].unsqueeze(0), state[1].unsqueeze(0)
 
-        q_values = self.model(input_ids=state, attention_mask=attention_mask)    # classification model
-        _, action = torch.max(q_values, dim=1)
-        return int(action.item())
+        if not isinstance(input_id, torch.Tensor):
+            input_id = torch.Tensor(input_id).float()
+            attention_mask = torch.Tensor(attention_mask).float()
+        if device != 'cpu':
+            input_id = input_id.to(device)
+            attention_mask = attention_mask.to(device)
+
+        logits = model(input_ids=input_id, attention_mask=attention_mask)    # classification model
+        action = torch.argmax(logits, dim=1)
+        return int(action)
 
     @torch.no_grad()
-    def step(self, state, attention_mask, epsilon: float, device: str = "cuda:0") -> Tuple[float, bool]:
-        # Batch로 작동하도록 수정
-        action = self.get_action(state, attention_mask, epsilon, device)
+    def step(self, model: nn.Module, epsilon: float, device: str = "cuda:0") -> Tuple[float, bool]:
+        action = self.get_action(model, self.state, epsilon, device)
         new_state, reward, terminal, _, _ = self.env.step(action)
         trans = Transition(self.state, action, reward, new_state, terminal)
 

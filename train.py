@@ -18,7 +18,7 @@ def main(config_path):
                                                 mode='min')
     # mode is max because train_loss will be the reward
     trainer = pl.Trainer(
-        accelerator='gpu', gpus=config['ngpu'],
+        accelerator='gpu', devices=config['ngpu'],
         check_val_every_n_epoch=config['check_val_every_n_epoch'],
         accumulate_grad_batches=config['accumulate_grad_batches'],
         log_every_n_steps=config['log_every_n_steps'],

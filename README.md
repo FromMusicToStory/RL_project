@@ -30,6 +30,10 @@ pip install -r requirements.txt
 mkdir checkpoint
 python train.py
 ```
+* run Dueling DQN
+```
+python train.py --config_name dueling_dqn
+```
 
 ## References
 [Pytorch-Lightning Tutorial For DQN](https://pytorch-lightning.readthedocs.io/en/stable/notebooks/lightning_examples/reinforce-learning-DQN.html)

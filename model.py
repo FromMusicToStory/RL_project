@@ -12,7 +12,7 @@ from tqdm import tqdm
 from hydra.utils import instantiate
 
 from dataset import KLAID_dataset
-from network import Classifier
+from network import Classifier, DuelingClassifier
 from environment import ClassifyEnv
 from agents import ValueAgent
 from buffer import ReplayBuffer, RLDataset

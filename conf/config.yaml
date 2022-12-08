@@ -14,7 +14,7 @@ model:
   net:
     _target_: network.Classifier
     model_name: ${model.model_name}
-    num_classes: 117
+    num_classes: 10
 
 
   # optimizer

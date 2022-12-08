@@ -1,0 +1,38 @@
+# trainer
+gpu: [1]
+max_epochs: 200
+check_val_every_n_epoch: 2
+accumulate_grad_batches: 1
+log_every_n_steps: 100
+checkpoint_path: "checkpoint/"
+
+
+model:
+  model_name: "klue/roberta-base"
+  batch_size: 32
+  num_workers: 8
+  net:
+    _target_: network.DuelingClassifier
+    model_name: ${model.model_name}
+    num_classes: 10
+
+
+  # optimizer
+  lr: 5e-5
+
+  # hyperparameter for RL
+  gamma: 0.9
+  sync_rate: 10
+
+  # eps
+  eps_start: 1.0
+  eps_end: 0.01
+
+  # populate
+  initial_eps: 1.0
+
+  gpu: ${gpu}
+
+# wandb logger
+project: RL
+name: DQN_base

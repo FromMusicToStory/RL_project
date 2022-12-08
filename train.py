@@ -5,7 +5,7 @@ import hydra
 from omegaconf import DictConfig,OmegaConf
 from model import DQNClassification
 
-@hydra.main(version_base=None, config_path='.', config_name='config')
+@hydra.main(version_base=None, config_path='conf', config_name='dueling_dqn')
 def main(config: DictConfig):
     config = OmegaConf.load(config)
     model = DQNClassification(config.model, run_mode='train')

@@ -17,6 +17,20 @@ class Classifier(nn.Module):
         logits = self.clf_layer(pooled_output)
         return logits
 
+class DuelingClassifier(nn.Module):
+    def __init__(self, model_name='klue/roberta-base', num_classes=177):
+        super().__init__()
+        self.model = AutoModel.from_pretrained(model_name)
+        self.advantage_layer = nn.Linear(self.model.config.hidden_size, num_classes)
+        self.value_layer = nn.Linear(self.model.config.hidden_size, 1)
+
+    def forward(self, input_ids, attention_mask):
+        outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
+        pooled_output = outputs[1]
+        value = self.value_layer(pooled_output)
+        advantage = self.advantage_layer(pooled_output)
+        adv_average = torch.mean(advantage, dim=1, keepdim=True)
+        return value + advantage - adv_average
 
 if __name__ == '__main__':
     from torch.utils.data import DataLoader
@@ -25,6 +39,7 @@ if __name__ == '__main__':
     dataset = KLAID_dataset()
     dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
-    model = Classifier(num_classes=177)
+    # model = Classifier(num_classes=10)
+    model = DuelingClassifier(num_classes=10)
     output = model(next(iter(dataloader))['encoded_output'], next(iter(dataloader))['encoded_attention_mask'])
     print(output.shape)

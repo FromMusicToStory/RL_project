@@ -31,8 +31,11 @@ model:
   # populate
   initial_eps: 1.0
 
+  # loss - you can choose either mse or smooth_l1
+  loss: mse   # smooth_l1
+
   gpu: ${gpu}
 
 # wandb logger
 project: RL
-name: DQN_base
+name: DQN_dueling

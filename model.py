@@ -32,7 +32,11 @@ class DQNClassification(pl.LightningModule):
             self.dataset = KLAID_dataset(model_name=self.model_name, split='test')
 
         self.num_classes = len(self.dataset.get_class_num())
-        self.criterion = nn.MSELoss()
+
+        if self.hparams['loss'] == 'mse':
+            self.criterion = nn.MSELoss()
+        elif self.hparams['loss'] == 'smooth_l1':
+            self.criterion = nn.SmoothL1Loss()
 
         print("\nInitializing the environment...")
         self.env = ClassifyEnv(run_mode=run_mode, dataset=self.dataset)
@@ -69,7 +73,7 @@ class DQNClassification(pl.LightningModule):
         # self.target_model = Classifier(model_name=self.model_name, num_classes=self.num_classes).to(self.device)
 
     def populate(self, hparams) -> None:
-        # steps: number of steps to populate the replay buffer
+        # number of steps to populate the replay buffer: len(dataset)
         print("\nPopulating the replay buffer...")
         device = hparams['gpu'][0]
         for _ in tqdm(range(len(self.env.env_data))):

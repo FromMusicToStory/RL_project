@@ -1,4 +1,4 @@
-import yaml
+import logging
 import pytorch_lightning as pl
 from pytorch_lightning.loggers.wandb import WandbLogger
 import hydra
@@ -7,7 +7,7 @@ from model import DQNClassification
 
 @hydra.main(version_base=None, config_path='conf', config_name='dueling_dqn')
 def main(config: DictConfig):
-    config = OmegaConf.load(config)
+    logging.info(f'Hydra config: {OmegaConf.to_yaml(config)}')
     model = DQNClassification(config.model, run_mode='train')
     model.train()
     lr_monitor = pl.callbacks.LearningRateMonitor()
@@ -28,5 +28,5 @@ def main(config: DictConfig):
 
 
 if __name__ == "__main__":
-    main("config.yaml")
+    main()
 

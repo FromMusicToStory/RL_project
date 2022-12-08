@@ -21,9 +21,6 @@ model:
       _target_: torch.nn.MSELoss
     gamma: 0.9
 
-  # dqn
-  double_dqn: False
-
   # optimizer
   lr: 5e-5
 
@@ -37,9 +34,6 @@ model:
 
   # populate
   initial_eps: 1.0
-
-  # loss - you can choose either mse or smooth_l1
-  loss: mse   # smooth_l1
 
   gpu: ${gpu}
 

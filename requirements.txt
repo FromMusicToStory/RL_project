@@ -6,3 +6,6 @@ numpy
 scikit-learn
 pytorch-lightning
 wandb
+hydra
+hydra-core
+omegaconf

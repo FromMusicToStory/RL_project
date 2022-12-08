@@ -15,9 +15,12 @@ model:
     _target_: network.Classifier
     model_name: ${model.model_name}
     num_classes: 10
+  loss:
+    _target_: loss.DoubleDQNLoss
+    criterion:
+      _target_: torch.nn.MSELoss
+    gamma: 0.9
 
-  # double dqn
-  double_dqn: True
 
   # optimizer
   lr: 5e-5
@@ -33,11 +36,8 @@ model:
   # populate
   initial_eps: 1.0
 
-  # loss - you can choose either mse or smooth_l1
-  loss: mse   # smooth_l1
-
   gpu: ${gpu}
 
 # wandb logger
 project: RL
-name: DQN_double
+name: DQN_base

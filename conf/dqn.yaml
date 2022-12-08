@@ -15,6 +15,11 @@ model:
     _target_: network.Classifier
     model_name: ${model.model_name}
     num_classes: 10
+  loss:
+    _target_: loss.DQNLoss
+    criterion:
+      _target_: torch.nn.MSELoss
+    gamma: 0.9
 
   # dqn
   double_dqn: False

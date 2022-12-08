@@ -25,6 +25,7 @@ class DQNClassification(pl.LightningModule):
         self.save_hyperparameters(hparams)
         self.model_name = hparams['model_name']
         self.model = hparams['net']
+        print(hparams)
 
         if run_mode == 'train':
             self.dataset = KLAID_dataset(model_name=self.model_name, split='train')
@@ -32,11 +33,7 @@ class DQNClassification(pl.LightningModule):
             self.dataset = KLAID_dataset(model_name=self.model_name, split='test')
 
         self.num_classes = len(self.dataset.get_class_num())
-
-        if self.hparams['loss'] == 'mse':
-            self.criterion = nn.MSELoss()
-        elif self.hparams['loss'] == 'smooth_l1':
-            self.criterion = nn.SmoothL1Loss()
+        self.loss = instantiate(hparams['loss'])
 
         print("\nInitializing the environment...")
         self.env = ClassifyEnv(run_mode=run_mode, dataset=self.dataset)
@@ -45,8 +42,6 @@ class DQNClassification(pl.LightningModule):
         self.net = None
         self.target_net = None
         self.build_networks()
-
-        self.double_dqn = self.hparams['double_dqn']
 
         self.capacity = len(self.dataset)
         self.buffer = ReplayBuffer(self.capacity)
@@ -75,7 +70,7 @@ class DQNClassification(pl.LightningModule):
         # self.target_model = Classifier(model_name=self.model_name, num_classes=self.num_classes).to(self.device)
 
     def populate(self, hparams) -> None:
-        # number of steps to populate the replay buffer: len(dataset)
+        # steps: number of steps to populate the replay buffer
         print("\nPopulating the replay buffer...")
         device = hparams['gpu'][0]
         for _ in tqdm(range(len(self.env.env_data))):
@@ -87,30 +82,6 @@ class DQNClassification(pl.LightningModule):
         logits = self.classification_model(batch[0], batch[1])
         predictions = torch.argmax(logits, dim=1)
         return predictions
-
-    def loss(self, batch, double_dqn=False):
-        # Input: current batch (states, actions, rewards, next states, terminals) of replay buffer
-        # Output: loss
-        if double_dqn == False:  # DQN
-            states, actions, rewards, next_states, terminals = batch
-            state_action_values = self.classification_model(input_ids=states[0], attention_mask=states[1]).gather(1, actions.unsqueeze(-1)).squeeze(-1)
-            with torch.no_grad():
-                next_state_values = self.target_model(input_ids=states[0], attention_mask=states[1]).max(1)[0]
-                next_state_values[terminals] = 0.0
-                next_state_values = next_state_values.detach()
-            expected_state_action_values = next_state_values * self.hparams['gamma'] + rewards
-
-        else:  # Double DQN
-            states, actions, rewards, next_states, terminals = batch
-            state_action_values = self.classification_model(input_ids=states[0], attention_mask=states[1]).gather(1, actions.unsqueeze(-1)).squeeze(-1)
-            with torch.no_grad():
-                next_state_actions = self.classification_model(input_ids=states[0], attention_mask=states[1]).max(1)[1]
-                next_state_values = self.target_model(input_ids=states[0], attention_mask=states[1]).gather(1, next_state_actions.unsqueeze(-1)).squeeze(-1)
-                next_state_values[terminals] = 0.0
-                next_state_values = next_state_values.detach()
-            expected_state_action_values = next_state_values * self.hparams['gamma'] + rewards
-
-        return self.criterion(state_action_values, expected_state_action_values)
 
     def configure_optimizers(self):
         optimizer = AdamW(self.classification_model.parameters(), lr=float(self.hparams['lr']))
@@ -133,7 +104,7 @@ class DQNClassification(pl.LightningModule):
         # wandb.log({'train/episode_reward': self.episode_reward})
 
         # calculates training loss
-        loss = self.loss(batch, self.double_dqn)
+        loss = self.loss(batch, self.classification_model, self.target_model)
         wandb.log({'train/loss': loss})
 
         if terminal:

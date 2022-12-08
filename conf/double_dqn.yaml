@@ -1,5 +1,5 @@
 # trainer
-gpu: [1]
+gpu: [2]
 max_epochs: 200
 check_val_every_n_epoch: 2
 accumulate_grad_batches: 1
@@ -18,21 +18,21 @@ model:
   loss:
     _target_: loss.DoubleDQNLoss
     criterion:
-      _target_: torch.nn.MSELoss
+      _target_: torch.nn.MSELoss  # nn.SmoothL1Loss()
     gamma: 0.9
 
 
   # optimizer
   lr: 5e-5
 
-  # hyperparameter for RL
+  # model sync rate
   sync_rate: 10
 
   # eps
   eps_start: 1.0
   eps_end: 0.01
 
-  # populate
+  # to populate
   initial_eps: 1.0
 
   gpu: ${gpu}

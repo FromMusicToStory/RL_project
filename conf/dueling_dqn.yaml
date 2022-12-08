@@ -1,5 +1,5 @@
 # trainer
-gpu: [3]
+gpu: [0]
 max_epochs: 200
 check_val_every_n_epoch: 2
 accumulate_grad_batches: 1
@@ -15,24 +15,24 @@ model:
     _target_: network.DuelingClassifier
     model_name: ${model.model_name}
     num_classes: 10
-
+  loss:
+    _target_: loss.DQNLoss
+    criterion:
+      _target_: torch.nn.MSELoss  # nn.SmoothL1Loss()
+    gamma: 0.9
 
   # optimizer
   lr: 5e-5
 
-  # hyperparameter for RL
-  gamma: 0.9
+  # model sync rate
   sync_rate: 10
 
   # eps
   eps_start: 1.0
   eps_end: 0.01
 
-  # populate
+  # to populate
   initial_eps: 1.0
-
-  # loss - you can choose either mse or smooth_l1
-  loss: mse   # smooth_l1
 
   gpu: ${gpu}
 

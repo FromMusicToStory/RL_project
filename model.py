@@ -25,7 +25,6 @@ class DQNClassification(pl.LightningModule):
         self.save_hyperparameters(hparams)
         self.model_name = hparams['model_name']
         self.model = hparams['net']
-        print(hparams)
 
         if run_mode == 'train':
             self.dataset = KLAID_dataset(model_name=self.model_name, split='train')

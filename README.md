@@ -30,6 +30,12 @@ pip install -r requirements.txt
 mkdir checkpoint
 python train.py
 ```
+
+* run Double DQN
+```
+python train.py --config-name double_dqn
+```
+
 * run Dueling DQN
 ```
 python train.py --config-name dueling_dqn

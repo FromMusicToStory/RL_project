@@ -68,8 +68,9 @@ class DQNClassification(pl.LightningModule):
     def populate(self, hparams) -> None:
         # steps: number of steps to populate the replay buffer
         print("\nPopulating the replay buffer...")
+        device = hparams['gpu'][0]
         for _ in tqdm(range(len(self.env.env_data))):
-            self.agent.step(self.classification_model, hparams['initial_eps'])
+            self.agent.step(self.classification_model, hparams['initial_eps'], 'cuda:{}'.format(device))
 
     def forward(self, batch):
         # Input: environment state
@@ -109,7 +110,7 @@ class DQNClassification(pl.LightningModule):
         reward, terminal = self.agent.step(self.classification_model, epsilon, device)
         self.episode_reward += reward
         self.episode_steps += 1
-        wandb.log({'train/episode_reward': self.episode_reward})
+        # wandb.log({'train/episode_reward': self.episode_reward})
 
         # calculates training loss
         loss = self.loss(batch)

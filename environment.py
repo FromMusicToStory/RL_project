@@ -40,7 +40,6 @@ class ClassifyEnv(gym.Env):
         self.y_preds.append(prediction)
         info = {}
         terminal = False
-        truncated = False
         answer_t = self.answer[self.step_id]  # answer of this step
         if prediction == answer_t:
             if answer_t in self.minorities:
@@ -51,7 +50,7 @@ class ClassifyEnv(gym.Env):
             if answer_t in self.minorities:
                 reward = -1
                 if self.run_mode == 'train':
-                    truncated = True
+                    terminal = True
             else:
                 reward = -1.0 * self.imb_rate[answer_t]
         self.step_id += 1
@@ -62,7 +61,7 @@ class ClassifyEnv(gym.Env):
 
             terminal = True  # end of step
 
-        return (self.env_data[self.step_id][0], self.env_data[self.step_id][1]), reward, terminal, truncated, info
+        return (self.env_data[self.step_id][0], self.env_data[self.step_id][1]), reward, terminal, info
 
     def get_metrics(self, y_pred, y_true):
         # weighted f1-score

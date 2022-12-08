@@ -23,6 +23,7 @@ def main(config: DictConfig):
         log_every_n_steps=config.log_every_n_steps,
         max_epochs=config.max_epochs,
         logger=WandbLogger(project=config.project, name=config.name),
+        checkpoint_callbak=checkponiter,
         callbacks=[lr_monitor, checkponiter])
     trainer.fit(model)
 

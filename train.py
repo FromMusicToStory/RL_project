@@ -11,7 +11,7 @@ def main(config: DictConfig):
     model = DQNClassification(config.model, run_mode='train')
     model.train()
     lr_monitor = pl.callbacks.LearningRateMonitor()
-    checkponiter = pl.callbacks.ModelCheckpoint(dirpath=config.checkpoint_path,
+    checkponiter = pl.callbacks.ModelCheckpoint(filepath=config.checkpoint_path,
                                                 filename='model_{epoch:02d}-{train_loss:.2f}',
                                                 verbose=True, save_last=True, save_top_k=3, monitor='train_loss',
                                                 mode='min')
@@ -23,7 +23,6 @@ def main(config: DictConfig):
         log_every_n_steps=config.log_every_n_steps,
         max_epochs=config.max_epochs,
         logger=WandbLogger(project=config.project, name=config.name),
-        checkpoint_callback=checkponiter,
         callbacks=[lr_monitor, checkponiter])
     trainer.fit(model)
 

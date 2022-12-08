@@ -25,7 +25,6 @@ model:
   lr: 5e-5
 
   # hyperparameter for RL
-  gamma: 0.9
   sync_rate: 10
 
   # eps

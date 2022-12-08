@@ -39,4 +39,4 @@ model:
 
 # wandb logger
 project: RL
-name: DQN_base
+name: DQN_double

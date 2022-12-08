@@ -32,7 +32,7 @@ python train.py
 ```
 * run Dueling DQN
 ```
-python train.py --config_name dueling_dqn
+python train.py --config-name dueling_dqn
 ```
 
 ## References

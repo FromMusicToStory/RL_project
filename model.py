@@ -46,6 +46,8 @@ class DQNClassification(pl.LightningModule):
         self.target_net = None
         self.build_networks()
 
+        self.double_dqn = self.hparams['double_dqn']
+
         self.capacity = len(self.dataset)
         self.buffer = ReplayBuffer(self.capacity)
         self.agent = ValueAgent(self.env, self.buffer)
@@ -86,16 +88,27 @@ class DQNClassification(pl.LightningModule):
         predictions = torch.argmax(logits, dim=1)
         return predictions
 
-    def loss(self, batch):
+    def loss(self, batch, double_dqn=False):
         # Input: current batch (states, actions, rewards, next states, terminals) of replay buffer
         # Output: loss
-        states, actions, rewards, next_states, terminals = batch
-        state_action_values = self.classification_model(input_ids=states[0], attention_mask=states[1]).gather(1, actions.unsqueeze(-1)).squeeze(-1)
-        with torch.no_grad():
-            next_state_values = self.target_model(input_ids=states[0], attention_mask=states[1]).max(1)[0]
-            next_state_values[terminals] = 0.0
-            next_state_values = next_state_values.detach()
-        expected_state_action_values = next_state_values * self.hparams['gamma'] + rewards
+        if double_dqn == False:  # DQN
+            states, actions, rewards, next_states, terminals = batch
+            state_action_values = self.classification_model(input_ids=states[0], attention_mask=states[1]).gather(1, actions.unsqueeze(-1)).squeeze(-1)
+            with torch.no_grad():
+                next_state_values = self.target_model(input_ids=states[0], attention_mask=states[1]).max(1)[0]
+                next_state_values[terminals] = 0.0
+                next_state_values = next_state_values.detach()
+            expected_state_action_values = next_state_values * self.hparams['gamma'] + rewards
+
+        else:  # Double DQN
+            states, actions, rewards, next_states, terminals = batch
+            state_action_values = self.classification_model(input_ids=states[0], attention_mask=states[1]).gather(1, actions.unsqueeze(-1)).squeeze(-1)
+            with torch.no_grad():
+                next_state_actions = self.classification_model(input_ids=states[0], attention_mask=states[1]).max(1)[1]
+                next_state_values = self.target_model(input_ids=states[0], attention_mask=states[1]).gather(1, next_state_actions.unsqueeze(-1)).squeeze(-1)
+                next_state_values[terminals] = 0.0
+                next_state_values = next_state_values.detach()
+            expected_state_action_values = next_state_values * self.hparams['gamma'] + rewards
 
         return self.criterion(state_action_values, expected_state_action_values)
 
@@ -120,7 +133,7 @@ class DQNClassification(pl.LightningModule):
         # wandb.log({'train/episode_reward': self.episode_reward})
 
         # calculates training loss
-        loss = self.loss(batch)
+        loss = self.loss(batch, self.double_dqn)
         wandb.log({'train/loss': loss})
 
         if terminal:

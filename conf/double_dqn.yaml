@@ -16,6 +16,8 @@ model:
     model_name: ${model.model_name}
     num_classes: 10
 
+  # double dqn
+  double_dqn: True
 
   # optimizer
   lr: 5e-5
@@ -38,4 +40,4 @@ model:
 
 # wandb logger
 project: RL
-name: DQN_base
+name: DQN_double

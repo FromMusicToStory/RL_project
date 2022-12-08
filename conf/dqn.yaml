@@ -1,5 +1,5 @@
 # trainer
-gpu: [3]
+gpu: [1]
 max_epochs: 200
 check_val_every_n_epoch: 2
 accumulate_grad_batches: 1
@@ -12,10 +12,12 @@ model:
   batch_size: 32
   num_workers: 8
   net:
-    _target_: network.DuelingClassifier
+    _target_: network.Classifier
     model_name: ${model.model_name}
     num_classes: 10
 
+  # dqn
+  double_dqn: False
 
   # optimizer
   lr: 5e-5
@@ -38,4 +40,4 @@ model:
 
 # wandb logger
 project: RL
-name: DQN_dueling
+name: DQN_base

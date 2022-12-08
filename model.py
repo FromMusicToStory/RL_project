@@ -1,5 +1,4 @@
 import os
-import argparse
 from typing import Dict, Tuple
 from collections import OrderedDict
 
@@ -10,6 +9,7 @@ from torch.optim import AdamW
 import pytorch_lightning as pl
 import wandb
 from tqdm import tqdm
+from hydra.utils import instantiate
 
 from dataset import KLAID_dataset
 from network import Classifier
@@ -24,6 +24,7 @@ class DQNClassification(pl.LightningModule):
         super(DQNClassification, self).__init__()
         self.save_hyperparameters(hparams)
         self.model_name = hparams['model_name']
+        self.model = hparams['net']
 
         if run_mode == 'train':
             self.dataset = KLAID_dataset(model_name=self.model_name, split='train')
@@ -62,8 +63,10 @@ class DQNClassification(pl.LightningModule):
 
     def build_networks(self):
         # Initializing the DQN network and the target network
-        self.classification_model = Classifier(model_name=self.model_name, num_classes=self.num_classes).to(self.device)
-        self.target_model = Classifier(model_name=self.model_name, num_classes=self.num_classes).to(self.device)
+        self.classification_model = instantiate(self.model)
+        self.target_model = instantiate(self.model)
+        # self.classification_model = Classifier(model_name=self.model_name, num_classes=self.num_classes).to(self.device)
+        # self.target_model = Classifier(model_name=self.model_name, num_classes=self.num_classes).to(self.device)
 
     def populate(self, hparams) -> None:
         # steps: number of steps to populate the replay buffer

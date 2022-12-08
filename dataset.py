@@ -6,7 +6,7 @@ from collections import Counter
 from tqdm import tqdm
 
 class KLAID_dataset(Dataset):
-    def __init__(self, model_name='klue/roberta-base', split='all'):
+    def __init__(self, model_name='klue/roberta-base', split='all', extract_class=True):
         self.dataset = load_dataset("lawcompany/KLAID", 'ljp')['train']
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.max_len = 125
@@ -19,6 +19,11 @@ class KLAID_dataset(Dataset):
             self.dataset = test
         else:
             self.dataset = self.dataset
+
+        if extract_class:
+            per_class_num  = self.get_class_num()
+            class_list = self.extract_class(per_class_num, num_to_left=10)
+            self.dataset = self.dataset.filter(lambda x: x['laws_service_id'] in class_list)
 
         self.encodings = []
         print("dataset preparing for faster loading")
@@ -36,19 +41,24 @@ class KLAID_dataset(Dataset):
         return dict_['train'], dict_['test']
 
     def get_class_num(self):
-        num_cls = Counter([data['laws_service_id'] for data in self.dataset])
-        return num_cls
+        per_class_num = Counter([data['laws_service_id'] for data in self.dataset])
+        return per_class_num
+
+    def extract_class(self, class_num, num_to_left):
+        per_class_num = {key: value for key, value in sorted(class_num.items(), key=lambda item: item[1], reverse=True)}
+        class_list = list(per_class_num.keys())[:num_to_left]
+        return class_list
 
     def get_major_minor_class(self, divide_by='mean'):
         if divide_by == 'mean':
             majority_class = {}
             minority_class = {}
-            class_num = self.get_class_num()
-            for key, value in zip(class_num.keys(), class_num.values()):
-                if value < statistics.mean(class_num.values()):
-                    minority_class[key] = value / sum(class_num.values())
+            per_class_num = self.get_class_num()
+            for key, value in zip(per_class_num.keys(), per_class_num.values()):
+                if value < statistics.mean(per_class_num.values()):
+                    minority_class[key] = value / sum(per_class_num.values())
                 else:
-                    majority_class[key] = value / sum(class_num.values())
+                    majority_class[key] = value / sum(per_class_num.values())
 
             majority_class = {key: value for key, value in sorted(majority_class.items(), key=lambda item: item[1], reverse=True)}
             minority_class = {key: value for key, value in sorted(minority_class.items(), key=lambda item: item[1], reverse=True)}
@@ -77,7 +87,7 @@ class KLAID_dataset(Dataset):
 
 
 if __name__ == '__main__':
-    dataset = KLAID_dataset(split='all')
+    dataset = KLAID_dataset(split='test')
     print(dataset[0])
     print(len(dataset))
 

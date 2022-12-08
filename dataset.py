@@ -44,8 +44,8 @@ class KLAID_dataset(Dataset):
         per_class_num = Counter([data['laws_service_id'] for data in self.dataset])
         return per_class_num
 
-    def extract_class(self, class_num, num_to_left):
-        per_class_num = {key: value for key, value in sorted(class_num.items(), key=lambda item: item[1], reverse=True)}
+    def extract_class(self, per_class_num, num_to_left):
+        per_class_num = {key: value for key, value in sorted(per_class_num.items(), key=lambda item: item[1], reverse=True)}
         class_list = list(per_class_num.keys())[:num_to_left]
         return class_list
 

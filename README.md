@@ -42,5 +42,31 @@ python train.py --config-name double_dqn
 python train.py --config-name dueling_dqn
 ```
 
+## Commands for Experiment
+* gamma
+```
+python train.py --config-name dqn model.loss.gamma=0.1 name=DQN_base_0.1
+python train.py --config-name dqn model.loss.gamma=0.5 name=DQN_base_0.5
+python train.py --config-name dqn model.loss.gamma=0.9 name=DQN_base_0.9
+```
+* Smooth L1 Loss
+```
+python train.py --config-name dqn model.loss.criterion._target_=torch.nn.SmoothL1Loss name=DQN_smooth
+python train.py --config-name double_dqn model.loss.criterion._target_=torch.nn.SmoothL1Loss name=double_smooth
+python train.py --config-name dueling_dqn model.loss.criterion._target_=torch.nn.SmoothL1Loss name=dueling_smooth
+```
+* Random Seed
+```
+python train.py --config_name dqn seed=1111 name=dqn_1111
+python train.py --config_name dqn seed=2222 name=dqn_2222
+python train.py --config_name dqn seed=3333 name=dqn_3333
+python train.py --config_name dqn seed=4444 name=dqn_4444
+python train.py --config_name dqn seed=5555 name=dqn_5555
+python train.py --config-name dqn seed=666 name=dqn_666
+python train.py --config_name dqn seed=777 name=dqn_777 
+python train.py --config-name dqn seed=6203 name=dqn_6203 
+python train.py --config-name dqn seed=3040 name=dqn_3040 
+python train.py --config-name dqn seed=6427 name=dqn_6427
+```
 ## References
 [Pytorch-Lightning Tutorial For DQN](https://pytorch-lightning.readthedocs.io/en/stable/notebooks/lightning_examples/reinforce-learning-DQN.html)

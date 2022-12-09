@@ -1,5 +1,6 @@
 import logging
 import pytorch_lightning as pl
+from pytorch_lightning.utilities.seed import seed_everything
 from pytorch_lightning.loggers.wandb import WandbLogger
 import hydra
 from omegaconf import DictConfig,OmegaConf
@@ -8,12 +9,16 @@ from model import DQNClassification
 @hydra.main(version_base=None, config_path='conf', config_name='dqn')
 def main(config: DictConfig):
     logging.info(f'Hydra config: {OmegaConf.to_yaml(config)}')
+    seed_everything(config.seed)
     model = DQNClassification(config.model, run_mode='train')
     model.train()
     lr_monitor = pl.callbacks.LearningRateMonitor()
+
+    config.checkpoint_path = config.checkpoint_path + config.name
+
     checkponiter = pl.callbacks.ModelCheckpoint(dirpath=config.checkpoint_path,
-                                                filename='model_{epoch:02d}-{train_loss:.2f}',
-                                                verbose=True, save_last=True, save_top_k=3, monitor='train_loss',
+                                                filename='{epoch:02d}-{loss:.2f}',
+                                                verbose=True, save_last=True, save_top_k=3, monitor='loss',
                                                 mode='min', save_on_train_epoch_end=True)
     # mode is max because train_loss will be the reward
     trainer = pl.Trainer(

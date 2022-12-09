@@ -136,7 +136,9 @@ class DQNClassification(pl.LightningModule):
                   'episode_steps': self.episode_steps,
                   'epsilon': epsilon
                   }
+
         self.log('loss', loss, on_step=True, on_epoch=True)
+
         return {
             'loss' : loss,
             'avg_reward' : torch.tensor(self.avg_reward, dtype=float),

@@ -36,6 +36,9 @@ model:
 
   gpu: ${gpu}
 
+# seed
+seed: 1111
+
 # wandb logger
 project: RL
-name: DQN_base
+name: DQN_base-1111

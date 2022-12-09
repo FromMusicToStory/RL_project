@@ -136,7 +136,7 @@ class DQNClassification(pl.LightningModule):
                   'epsilon': epsilon
                   }
 
-        self.log('loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log('loss', loss, on_step=True, on_epoch=True)
 
         return {
             'loss' : loss,

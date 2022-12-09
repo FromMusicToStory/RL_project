@@ -1,5 +1,6 @@
 import logging
 import pytorch_lightning as pl
+from pytorch_lightning.utilities.seed import seed_everything
 from pytorch_lightning.loggers.wandb import WandbLogger
 import hydra
 from omegaconf import DictConfig,OmegaConf
@@ -8,6 +9,7 @@ from model import DQNClassification
 @hydra.main(version_base=None, config_path='conf', config_name='dqn')
 def main(config: DictConfig):
     logging.info(f'Hydra config: {OmegaConf.to_yaml(config)}')
+    seed_everything(config.seed)
     model = DQNClassification(config.model, run_mode='train')
     model.train()
     lr_monitor = pl.callbacks.LearningRateMonitor()

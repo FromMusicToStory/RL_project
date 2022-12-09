@@ -14,7 +14,7 @@ def main(config: DictConfig):
     checkponiter = pl.callbacks.ModelCheckpoint(dirpath=config.checkpoint_path,
                                                 filename='model_{epoch:02d}-{train_loss:.2f}',
                                                 verbose=True, save_last=True, save_top_k=3, monitor='train_loss',
-                                                mode='min')
+                                                mode='min', save_on_train_epoch_end=True)
     # mode is max because train_loss will be the reward
     trainer = pl.Trainer(
         accelerator='gpu', devices=config.gpu,
@@ -23,7 +23,6 @@ def main(config: DictConfig):
         log_every_n_steps=config.log_every_n_steps,
         max_epochs=config.max_epochs,
         logger=WandbLogger(project=config.project, name=config.name),
-        checkpoint_callbak=checkponiter,
         callbacks=[lr_monitor, checkponiter])
     trainer.fit(model)
 

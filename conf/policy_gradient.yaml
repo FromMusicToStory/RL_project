@@ -12,14 +12,16 @@ model:
   batch_size: 32
   num_workers: 8
   net:
-    _target_: network.PolicyNet
-    model_name: ${model.model_name}
-    num_classes: 10
-  loss:
-    _target_: loss.DQNLoss
-    criterion:
-      _target_: torch.nn.MSELoss
-    gamma: 0.9
+    policy_net:
+      _target_ : network.PolicyNet
+      model_name : $(model.model_name)
+      num_classes: 10
+      distribution: torch.distributions.Categorical
+    value_net:
+      _target_: network.Classifier
+      model_name : $(model.model_name)
+      num_classes: $(model.net.policy_net.num_classes)
+  gamma: 0.9
 
   # optimizer
   lr: 5e-5
@@ -35,6 +37,8 @@ model:
   initial_eps: 1.0
 
   gpu: ${gpu}
+# seed
+seed: 99
 
 # wandb logger
 project: RL

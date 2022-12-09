@@ -85,29 +85,8 @@ class PolicyAgent(Agent):
         self.buffer = replay_buffer
         self.state = self.env.reset()
 
-    def __call__(self, state: torch.Tensor, policy : nn.Module, device: str) -> int:
-        """
-        Takes in the current state and returns the action based on the agents policy
-        Args:
-            state: current state of the environment
-            device: the device used for the current batch
-        Returns:
-            action defined by policy
-        """
-        if device.type != 'cpu':
-            state = state.cuda(device)
-
-        # get the logits and pass through softmax for probability distribution
-        probabilities = F.softmax(self.net(state))
-        prob_np = probabilities.data.cpu().numpy()
-
-        # take the numpy values and randomly select action based on prob distribution
-        action = np.random.choice(len(prob_np), p=prob_np)
-
-        return action
-
-    def step(self, state: torch.Tensor, policy : nn.Module):
-        action = policy(state)
+    def step(self, state: torch.Tensor, policy : nn.Module, device):
+        action, prob = policy.get_action_and_prob(state, device)
         new_state, reward, terminal, _ = self.env.step(action)
         trans = Transition(self.state, action, reward, new_state, terminal)
 
@@ -116,7 +95,7 @@ class PolicyAgent(Agent):
         self.state = new_state
         if terminal:
             self.reset()
-        return reward, terminal
+        return reward, terminal, prob
 
     def reset(self):
         self.state = self.env.reset()

@@ -1,6 +1,7 @@
 import os
 from typing import Dict, Tuple
 from collections import OrderedDict
+import math
 
 import torch
 from torch.utils.data import DataLoader
@@ -135,7 +136,7 @@ class DQNClassification(pl.LightningModule):
                   'episode_steps': self.episode_steps,
                   'epsilon': epsilon
                   }
-
+        self.log('loss', loss, on_step=True, on_epoch=True)
         return {
             'loss' : loss,
             'avg_reward' : torch.tensor(self.avg_reward, dtype=float),
@@ -190,3 +191,99 @@ class DQNClassification(pl.LightningModule):
 
     def infer(self):
         pass
+
+
+
+class PolicyGradientClassification(DQNClassification):
+    def __init__(self, hparams, run_mode):
+        super(PolicyGradientClassification, self).__init__(hparams, run_mode)
+        self.automatic_optimization = False
+        self.gamma = hparams['gamma']
+        self.returns = []
+        self.probs = []
+
+        self.p_criterion = None
+        self.v_criterion = nn.MSELoss()
+
+    def build_networks(self):
+        self.p_net = instantiate(self.model['policy_net'])
+        self.v_net = instantiate(self.model['value_net'])
+
+    def configure_optimizers(self):
+        p_opt = AdamW(self.p_net.parameters(), lr=float(self.hparams['lr']))
+        v_opt = AdamW(self.v_net.parameterse(), lr=float(self.hparams['lr']))
+        return p_opt, v_opt
+
+    def calculate_returns(self, rewards):
+        discounted_rewards = [ math.pow(self.gamma,i) * r for i, r in enumerate(rewards)]
+        return [ sum(discounted_rewards[i:]) for i in range(len(discounted_rewards))]
+
+    def training_step(self, batch):
+        p_opt , v_opt = self.optimizers()
+        device = self.get_device(batch)
+
+        terminal = False
+        probs, rewards = [], []
+        while terminal is not True:
+            reward, terminal, prob = self.agent.step(batch[0], self.p_net, device)
+            self.episode_reward += reward
+            self.episode_steps += 1
+
+            rewards.append(reward)
+            probs.append(prob)
+
+        returns = self.calculate_returns(rewards)
+        p_loss = - (returns * probs).mean()
+        v_loss = self.v_criterion(returns[0], self.v_net(batch[0][0], batch[0][1]))
+
+
+        p_opt.zero_grad()
+        self.manual_backward(p_loss)
+        p_opt.step()
+
+        v_opt.zero_grad()
+        self.manual_backward(v_loss)
+        v_opt.zero_grad()
+
+        if terminal:
+            self.total_reward = self.episode_reward
+            self.reward_list.append(self.total_reward)
+            self.avg_reward = sum(self.reward_list[-100:]) / 100
+            self.episode_count += 1
+            self.episode_reward = 0
+            self.total_episode_steps = self.episode_steps
+            self.episode_steps = 0
+
+        log = {'policy_loss': p_loss,
+               'value_loss' : v_loss,
+               'total_reward': self.total_reward,
+               'avg_reward': self.avg_reward,
+               'avg_return': sum(self.returns) / len(self.returns),
+               'episode_steps': self.total_episode_steps
+               }
+        status = {'steps': self.global_step,
+                  'avg_reward': self.avg_reward,
+                  'total_reward': self.total_reward,
+                  'episodes': self.episode_count,
+                  'episode_steps': self.episode_steps,
+                  }
+
+        return {
+            'policy_loss': p_loss,
+            'value_loss': v_loss,
+            'avg_reward' : torch.tensor(self.avg_reward, dtype=float),
+            'total_reward' : torch.tensor(self.total_reward, dtype=float),
+            'episode_steps' : torch.tensor(self.episode_steps, dtype=float),
+            'total_reward' : torch.tensor(self.total_reward, dtype=float),
+            'log' : log,
+            'progress_bar' : status
+        }
+
+    def training_epoch_end(self, outputs):
+        # collect outputs
+        collect = lambda key: torch.stack([x[key] for x in outputs]).mean()
+        p_loss = collect('policy_loss')
+        v_loss = collect('value_loss')
+
+        wandb.log({'train/policy_loss': p_loss})
+        wandb.log({'train/value_loss': v_loss})

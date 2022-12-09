@@ -36,6 +36,10 @@ model:
 
   gpu: ${gpu}
 
+# seed
+seed: 99
+
+
 # wandb logger
 project: RL
 name: DQN_dueling

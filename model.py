@@ -12,9 +12,9 @@ from tqdm import tqdm
 from hydra.utils import instantiate
 
 from dataset import KLAID_dataset
-from network import Classifier, DuelingClassifier
+from network import Classifier, DuelingClassifier, PolicyNet
 from environment import ClassifyEnv
-from agents import ValueAgent
+from agents import ValueAgent, PolicyAgent
 from buffer import ReplayBuffer, RLDataset
 
 os.environ['TOKENIZERS_PARALLELISM']='FALSE'
@@ -45,7 +45,10 @@ class DQNClassification(pl.LightningModule):
 
         self.capacity = len(self.dataset)
         self.buffer = ReplayBuffer(self.capacity)
-        self.agent = ValueAgent(self.env, self.buffer)
+        if isinstance(self.net, PolicyNet):
+            self.agent = PolicyAgent(env=self.env, replay_buffer=self.buffer)
+        else:
+            self.agent = ValueAgent(env=self.env, replay_buffer=self.buffer)
 
         self.total_reward = 0
         self.avg_reward = 0

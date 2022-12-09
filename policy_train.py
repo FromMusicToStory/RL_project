@@ -3,19 +3,19 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers.wandb import WandbLogger
 import hydra
 from omegaconf import DictConfig,OmegaConf
-from model import PolicyGradientClassification
+from policy_model import PolicyGradientClassification
 
 @hydra.main(version_base=None, config_path='conf', config_name='policy_gradient')
 def main(config: DictConfig):
     logging.info(f'Hydra config: {OmegaConf.to_yaml(config)}')
-    model = PolicyGradientClassification(config.model, run_mode='train')
+    model = PolicyGradientClassification(config.model, run_mode='test')
     model.train()
     lr_monitor = pl.callbacks.LearningRateMonitor()
     config.checkpoint_path = config.checkpoint_path + config.name
 
     checkponiter = pl.callbacks.ModelCheckpoint(dirpath=config.checkpoint_path,
                                                 filename='{epoch:02d}-{loss:.2f}',
-                                                verbose=True, save_last=True, save_top_k=3, monitor='loss',
+                                                verbose=True, save_last=True, save_top_k=3, monitor='policy_loss',
                                                 mode='min', save_on_train_epoch_end=True)   # mode is max because train_loss will be the reward
     trainer = pl.Trainer(
         accelerator='gpu', devices=config.gpu,

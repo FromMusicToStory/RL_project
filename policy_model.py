@@ -18,11 +18,11 @@ from environment import ClassifyEnv
 from agents import ValueAgent, PolicyAgent
 from buffer import ReplayBuffer, RLDataset
 
-os.environ['TOKENIZERS_PARALLELISM']='FALSE'
+class PolicyGradientClassification(pl.LightningModule):
+    def __init__(self, hparams, run_mode):
+        super(PolicyGradientClassification, self).__init__()
+        self.automatic_optimization = False
 
-class DQNClassification(pl.LightningModule):
-    def __init__(self, hparams: Dict, run_mode: str):
-        super(DQNClassification, self).__init__()
         self.save_hyperparameters(hparams)
         self.model_name = hparams['model_name']
         self.model = hparams['net']
@@ -33,19 +33,16 @@ class DQNClassification(pl.LightningModule):
             self.dataset = KLAID_dataset(model_name=self.model_name, split='test')
 
         self.num_classes = len(self.dataset.get_class_num())
-        self.loss = instantiate(hparams['loss'])
 
         print("\nInitializing the environment...")
         self.env = ClassifyEnv(run_mode=run_mode, dataset=self.dataset)
         self.env.seed(42)
 
-        self.net = None
-        self.target_net = None
         self.build_networks()
 
         self.capacity = len(self.dataset)
         self.buffer = ReplayBuffer(self.capacity)
-        self.agent = ValueAgent(env=self.env, replay_buffer=self.buffer)
+        self.agent = PolicyAgent(env=self.env, replay_buffer=self.buffer)
 
         self.total_reward = 0
         self.avg_reward = 0
@@ -56,56 +53,66 @@ class DQNClassification(pl.LightningModule):
         self.episode_steps = 0
         self.total_episode_steps = 0
 
+        self.gamma = hparams['gamma']
+        self.returns = []
+        self.probs = []
+
+        self.p_criterion = None
+        self.v_criterion = nn.MSELoss()
+
         self.populate(self.hparams)
 
-
-    def get_device(self, batch):
-        return batch[0][0].device if torch.cuda.is_available() else 'cpu'
-
-    def build_networks(self):
-        # Initializing the DQN network and the target network
-        self.classification_model = instantiate(self.model)
-        self.target_model = instantiate(self.model)
-        # self.classification_model = Classifier(model_name=self.model_name, num_classes=self.num_classes).to(self.device)
-        # self.target_model = Classifier(model_name=self.model_name, num_classes=self.num_classes).to(self.device)
-
-    def populate(self, hparams) -> None:
-        # steps: number of steps to populate the replay buffer
+    def populate(self, hparams):
         print("\nPopulating the replay buffer...")
+        print()
         device = hparams['gpu'][0]
         for _ in tqdm(range(len(self.env.env_data))):
-            self.agent.step(self.classification_model, hparams['initial_eps'], 'cuda:{}'.format(device))
+            self.agent.step(self.p_net, device)
 
-    def forward(self, batch):
-        # Input: environment state
-        # Output: Q values
-        logits = self.classification_model(batch[0], batch[1])
-        predictions = torch.argmax(logits, dim=1)
-        return predictions
+    def build_networks(self):
+        self.p_net = instantiate(self.model['policy_net'])
+        self.v_net = instantiate(self.model['value_net'])
 
     def configure_optimizers(self):
-        optimizer = AdamW(self.classification_model.parameters(), lr=float(self.hparams['lr']))
-        return [optimizer]
+        p_opt = AdamW(self.p_net.parameters(), lr=float(self.hparams['lr']))
+        v_opt = AdamW(self.v_net.parameterse(), lr=float(self.hparams['lr']))
+        return p_opt, v_opt
 
-    def get_epsilon(self, start, end, frames):
-        # epsilon for Exploration or Exploitation
-        if self.global_step > frames:
-            return end
-        return start - (self.global_step / frames) * (start - end)
+    def calculate_returns(self, rewards):
+        discounted_rewards = [ math.pow(self.gamma,i) * r for i, r in enumerate(rewards)]
+        return [ sum(discounted_rewards[i:]) for i in range(len(discounted_rewards))]
 
-    def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], _) -> OrderedDict:
+    def forward(self, batch):
+        logits = self.v_net(batch[0], batch[1])
+        predictions = self.p_net(logits) # ??
+        return predictions
+
+    def training_step(self, batch):
+        p_opt , v_opt = self.optimizers()
         device = self.get_device(batch)
-        epsilon = self.get_epsilon(self.hparams['eps_start'], self.hparams['eps_end'], self.capacity)
-        wandb.log({'train/epsilon': epsilon})
 
-        reward, terminal = self.agent.step(self.classification_model, epsilon, device)
-        self.episode_reward += reward
-        self.episode_steps += 1
-        # wandb.log({'train/episode_reward': self.episode_reward})
+        terminal = False
+        probs, rewards = [], []
+        while terminal is not True:
+            reward, terminal, prob = self.agent.step(batch[0], self.p_net, device)
+            self.episode_reward += reward
+            self.episode_steps += 1
 
-        # calculates training loss
-        loss = self.loss(batch, self.classification_model, self.target_model)
-        wandb.log({'train/loss': loss})
+            rewards.append(reward)
+            probs.append(prob)
+
+        returns = self.calculate_returns(rewards)
+        p_loss = - (returns * probs).mean()
+        v_loss = self.v_criterion(returns[0], self.v_net(batch[0][0], batch[0][1]))
+
+
+        p_opt.zero_grad()
+        self.manual_backward(p_loss)
+        p_opt.step()
+
+        v_opt.zero_grad()
+        self.manual_backward(v_loss)
+        v_opt.zero_grad()
 
         if terminal:
             self.total_reward = self.episode_reward
@@ -116,14 +123,13 @@ class DQNClassification(pl.LightningModule):
             self.total_episode_steps = self.episode_steps
             self.episode_steps = 0
 
-        # Soft update of target network
-        if self.global_step % self.hparams['sync_rate'] == 0:
-            self.target_model.load_state_dict(self.classification_model.state_dict())
+        self.log('policy_loss', p_loss)
 
-
-        log = {'total_reward': self.total_reward,
+        log = {'policy_loss': p_loss,
+               'value_loss' : v_loss,
+               'total_reward': self.total_reward,
                'avg_reward': self.avg_reward,
-               'train_loss': loss,
+               'avg_return': sum(self.returns) / len(self.returns),
                'episode_steps': self.total_episode_steps
                }
         status = {'steps': self.global_step,
@@ -131,13 +137,11 @@ class DQNClassification(pl.LightningModule):
                   'total_reward': self.total_reward,
                   'episodes': self.episode_count,
                   'episode_steps': self.episode_steps,
-                  'epsilon': epsilon
                   }
 
-        self.log('loss', loss, on_step=True, on_epoch=True)
-
         return {
-            'loss' : loss,
+            'policy_loss': p_loss,
+            'value_loss': v_loss,
             'avg_reward' : torch.tensor(self.avg_reward, dtype=float),
             'total_reward' : torch.tensor(self.total_reward, dtype=float),
             'episode_steps' : torch.tensor(self.episode_steps, dtype=float),
@@ -146,25 +150,14 @@ class DQNClassification(pl.LightningModule):
             'progress_bar' : status
         }
 
-    def training_epoch_end(self, outputs) -> None:
+    def training_epoch_end(self, outputs):
+        # collect outputs
         collect = lambda key: torch.stack([x[key] for x in outputs]).mean()
-        loss = collect('loss')
-        avg_reward = collect('avg_reward')
-        episode_steps = collect('episode_steps')
-        total_reward = collect('total_reward')
+        p_loss = collect('policy_loss')
+        v_loss = collect('value_loss')
 
-        wandb.log({"train/loss": loss})
-
-        wandb.log({"train/avg_reward": avg_reward})
-
-        wandb.log({"train/episode_steps": episode_steps})
-        wandb.log({"train/total_reward": total_reward})
-
-        # reset episode related variables
-        self.episode_reward = 0
-        self.episode_count = 0
-        self.episode_steps = 0
-
+        wandb.log({'train/policy_loss': p_loss})
+        wandb.log({'train/value_loss': v_loss})
 
     def __dataloader(self):
         dataset = RLDataset(replay_buffer=self.buffer, buffer_size=self.capacity)

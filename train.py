@@ -11,9 +11,12 @@ def main(config: DictConfig):
     model = DQNClassification(config.model, run_mode='train')
     model.train()
     lr_monitor = pl.callbacks.LearningRateMonitor()
+
+    config.checkpoint_path = config.checkpoint_path + config.name
+
     checkponiter = pl.callbacks.ModelCheckpoint(dirpath=config.checkpoint_path,
-                                                filename='model_{epoch:02d}-{train_loss:.2f}',
-                                                verbose=True, save_last=True, save_top_k=3, monitor='train_loss',
+                                                filename='{epoch:02d}-{loss:.2f}',
+                                                verbose=True, save_last=True, save_top_k=3, monitor='loss',
                                                 mode='min', save_on_train_epoch_end=True)
     # mode is max because train_loss will be the reward
     trainer = pl.Trainer(

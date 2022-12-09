@@ -14,13 +14,13 @@ model:
   net:
     policy_net:
       _target_ : network.PolicyNet
-      model_name : $(model.model_name)
+      model_name : ${model.model_name}
       num_classes: 10
       distribution: torch.distributions.Categorical
     value_net:
       _target_: network.Classifier
-      model_name : $(model.model_name)
-      num_classes: $(model.net.policy_net.num_classes)
+      model_name : ${model.model_name}
+      num_classes: ${model.net.policy_net.num_classes}
   gamma: 0.9
 
   # optimizer

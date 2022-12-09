@@ -79,7 +79,13 @@ class ValueAgent(Agent):
 
 
 class PolicyAgent(Agent):
-    def __call__(self, state: torch.Tensor, device: str) -> int:
+    def __init__(self, env: ClassifyEnv, replay_buffer: ReplayBuffer):
+        self.env = env
+        self.reset()
+        self.buffer = replay_buffer
+        self.state = self.env.reset()
+
+    def __call__(self, state: torch.Tensor, policy : nn.Module, device: str) -> int:
         """
         Takes in the current state and returns the action based on the agents policy
         Args:
@@ -99,3 +105,18 @@ class PolicyAgent(Agent):
         action = np.random.choice(len(prob_np), p=prob_np)
 
         return action
+
+    def step(self, state: torch.Tensor, policy : nn.Module):
+        action = policy(state)
+        new_state, reward, terminal, _ = self.env.step(action)
+        trans = Transition(self.state, action, reward, new_state, terminal)
+
+        self.buffer.append(trans)
+
+        self.state = new_state
+        if terminal:
+            self.reset()
+        return reward, terminal
+
+    def reset(self):
+        self.state = self.env.reset()

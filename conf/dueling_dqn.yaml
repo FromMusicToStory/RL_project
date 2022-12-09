@@ -37,7 +37,7 @@ model:
   gpu: ${gpu}
 
 # seed
-seed: 99
+seed: 9999
 
 
 # wandb logger

@@ -16,7 +16,6 @@ model:
       _target_ : network.PolicyNet
       model_name : ${model.model_name}
       num_classes: 10
-      distribution: torch.distributions.Categorical
     value_net:
       _target_: network.Classifier
       model_name : ${model.model_name}

@@ -85,8 +85,8 @@ class PolicyAgent(Agent):
         self.buffer = replay_buffer
         self.state = self.env.reset()
 
-    def step(self, state: torch.Tensor, policy : nn.Module, device):
-        action, prob = policy.get_action_and_prob(state, device)
+    def step(self, policy : nn.Module, device):
+        action, prob = policy.get_action_and_prob(self.state, device)
         new_state, reward, terminal, _ = self.env.step(action)
         trans = Transition(self.state, action, reward, new_state, terminal)
 

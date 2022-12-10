@@ -39,7 +39,7 @@ class PolicyNet(nn.Module):
         self.policy_layer = nn.Sequential(
             nn.Linear(self.model.config.hidden_size, num_classes),
             nn.ReLU(),
-            nn.Softmax(num_classes),
+            nn.Softmax(dim=1),
         )
 
     def forward(self, input_ids, attention_mask):

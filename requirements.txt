@@ -1,5 +1,5 @@
 datasets
-torch
+torch==1.12.1
 transformers
 gym
 numpy
@@ -9,3 +9,4 @@ wandb
 hydra
 hydra-core
 omegaconf
+protobuf==3.20.1

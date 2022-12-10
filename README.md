@@ -57,13 +57,13 @@ python train.py --config-name dueling_dqn model.loss.criterion._target_=torch.nn
 ```
 * Random Seed
 ```
-python train.py --config_name dqn seed=1111 name=dqn_1111
-python train.py --config_name dqn seed=2222 name=dqn_2222
-python train.py --config_name dqn seed=3333 name=dqn_3333
-python train.py --config_name dqn seed=4444 name=dqn_4444
-python train.py --config_name dqn seed=5555 name=dqn_5555
+python train.py --config-name dqn seed=1111 name=dqn_1111
+python train.py --config-name dqn seed=2222 name=dqn_2222
+python train.py --config-name dqn seed=3333 name=dqn_3333
+python train.py --config-name dqn seed=4444 name=dqn_4444
+python train.py --config-name dqn seed=5555 name=dqn_5555
 python train.py --config-name dqn seed=666 name=dqn_666
-python train.py --config_name dqn seed=777 name=dqn_777 
+python train.py --config-name dqn seed=777 name=dqn_777 
 python train.py --config-name dqn seed=6203 name=dqn_6203 
 python train.py --config-name dqn seed=3040 name=dqn_3040 
 python train.py --config-name dqn seed=6427 name=dqn_6427

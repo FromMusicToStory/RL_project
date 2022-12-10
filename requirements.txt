@@ -9,3 +9,4 @@ wandb
 hydra
 hydra-core
 omegaconf
+protobuf==3.20.1

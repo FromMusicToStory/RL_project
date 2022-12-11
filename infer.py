@@ -36,11 +36,11 @@ def main(args):
 
     # infer
     trues, preds = [], []
-    print("start infer")
+    print("\nstart infer")
     for i, data in tqdm(enumerate(net.dataset)):  # get dataset
         input_ids, attention_mask, true_label = data['encoded_output'], data['encoded_attention_mask'], data['law_service_id']
         prediction = net.model(input_ids=input_ids.unsqueeze(0), attention_mask=attention_mask.unsqueeze(0))
-        pred_label = pred_to_label(prediction)
+        pred_label = prediction.argmax(1).item()
         trues.append(true_label)
         preds.append(pred_label)
 

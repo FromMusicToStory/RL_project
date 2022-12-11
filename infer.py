@@ -3,7 +3,8 @@ from argparse import ArgumentParser
 from sklearn.metrics import confusion_matrix, f1_score
 
 from dataset import KLAID_dataset
-from model import DQNClassification, PolicyGradientClassification
+from model import DQNClassification
+from policy_model import PolicyGradientClassification
 
 def get_network(net_name, checkpoint_path):
     net = None

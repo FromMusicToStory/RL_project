@@ -33,29 +33,31 @@ class DQNClassification(pl.LightningModule):
             self.dataset = KLAID_dataset(model_name=self.model_name, split='test')
 
         self.num_classes = len(self.dataset.get_class_num())
-        self.loss = instantiate(hparams['loss'])
 
-        print("\nInitializing the environment...")
-        self.env = ClassifyEnv(run_mode=run_mode, dataset=self.dataset)
-        self.env.seed(42)
+        if run_mode == 'train':
+            self.loss = instantiate(hparams['loss'])
 
-        self.net = None
-        self.target_net = None
-        self.build_networks()
+            print("\nInitializing the environment...")
+            self.env = ClassifyEnv(run_mode=run_mode, dataset=self.dataset)
+            self.env.seed(42)
 
-        self.capacity = len(self.dataset)
-        self.buffer = ReplayBuffer(self.capacity)
-        self.agent = ValueAgent(env=self.env, replay_buffer=self.buffer)
-        self.total_reward = 0
-        self.avg_reward = 0
-        self.reward_list = []
+            self.net = None
+            self.target_net = None
+            self.build_networks()
 
-        self.episode_reward = 0
-        self.episode_count = 0
-        self.episode_steps = 0
-        self.total_episode_steps = 0
+            self.capacity = len(self.dataset)
+            self.buffer = ReplayBuffer(self.capacity)
+            self.agent = ValueAgent(env=self.env, replay_buffer=self.buffer)
+            self.total_reward = 0
+            self.avg_reward = 0
+            self.reward_list = []
 
-        self.populate(self.hparams)
+            self.episode_reward = 0
+            self.episode_count = 0
+            self.episode_steps = 0
+            self.total_episode_steps = 0
+
+            self.populate(self.hparams)
 
 
     def get_device(self, batch):

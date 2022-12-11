@@ -35,34 +35,35 @@ class PolicyGradientClassification(pl.LightningModule):
 
         self.num_classes = len(self.dataset.get_class_num())
 
-        print("\nInitializing the environment...")
-        self.env = ClassifyEnv(run_mode=run_mode, dataset=self.dataset)
-        self.env.seed(42)
+        if run_mode == 'train':
+            print("\nInitializing the environment...")
+            self.env = ClassifyEnv(run_mode=run_mode, dataset=self.dataset)
+            self.env.seed(42)
 
-        self.build_networks(self.hparams)
+            self.build_networks(self.hparams)
 
-        self.capacity = len(self.dataset)
-        self.buffer = ReplayBuffer(self.capacity)
-        self.agent = PolicyAgent(env=self.env, replay_buffer=self.buffer)
+            self.capacity = len(self.dataset)
+            self.buffer = ReplayBuffer(self.capacity)
+            self.agent = PolicyAgent(env=self.env, replay_buffer=self.buffer)
 
-        self.total_reward = 0
-        self.avg_reward = 0
-        self.reward_list = []
+            self.total_reward = 0
+            self.avg_reward = 0
+            self.reward_list = []
 
-        self.episode_reward = []
-        self.episode_prob = []
-        self.episode_count = 0
-        self.episode_steps = 0
-        self.total_episode_steps = 0
+            self.episode_reward = []
+            self.episode_prob = []
+            self.episode_count = 0
+            self.episode_steps = 0
+            self.total_episode_steps = 0
 
-        self.gamma = hparams['gamma']
-        self.returns = []
-        self.probs = []
+            self.gamma = hparams['gamma']
+            self.returns = []
+            self.probs = []
 
-        self.p_criterion = None
-        self.v_criterion = nn.MSELoss()
+            self.p_criterion = None
+            self.v_criterion = nn.MSELoss()
 
-        self.populate(self.hparams)
+            self.populate(self.hparams)
 
     def populate(self, hparams):
         print("\nPopulating the replay buffer...")

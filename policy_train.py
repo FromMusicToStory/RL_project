@@ -8,7 +8,7 @@ from policy_model import PolicyGradientClassification
 @hydra.main(version_base=None, config_path='conf', config_name='policy_gradient')
 def main(config: DictConfig):
     logging.info(f'Hydra config: {OmegaConf.to_yaml(config)}')
-    model = PolicyGradientClassification(config.model, run_mode='test')
+    model = PolicyGradientClassification(config.model, run_mode='train')
     model.train()
     lr_monitor = pl.callbacks.LearningRateMonitor()
     config.checkpoint_path = config.checkpoint_path + config.name

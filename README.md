@@ -9,14 +9,13 @@ We aimed to extend the original method to a Korean multi-class text classificati
 
 We used the [KLAID](https://huggingface.co/datasets/lawcompany/KLAID) dataset.
 
-## TO-DO LIST
+## Differences from the original paper
 
-- [ ]  논문 github 보고 Environment, Agent 등 전체 프레임워크 Pytorch 로 바꾸기
-- [ ]  [Keras-RL](https://github.com/keras-rl/keras-rl) 패키지에서 사용할 것 Pytorch로 구현
-- [x]  Classification Model을 Pretrained Model 을 Finetuning 하는 것으로 바꾸기
-- [ ]  DQN 을 다른 걸로 바꾸기
-- [x]  KLAID 데이터셋 프로세싱하는 dataset.py 만들기 (data loading 용) => hugginface dataset 사용하면 됨
-
+- [x]  Implemented the original paper's method using PyTorch Lightning, instead of [Keras-RL](https://github.com/keras-rl/keras-rl)
+- [x]  Used a Korean dataset [KLAID](https://huggingface.co/datasets/lawcompany/KLAID), instead of an English dataset
+- [x]  Converted to a multi-class classification task (10 classes), instead of a binary classification task
+- [x]  Used a pre-trained encoder, instead of an original network
+- [x]  Used not only DQN but also Double DQN, Dueling DQN, and Policy Gradient
 
 ## Installation
 
@@ -40,6 +39,11 @@ python train.py --config-name double_dqn
 * run Dueling DQN
 ```
 python train.py --config-name dueling_dqn
+```
+
+* run Policy Gradient
+```
+python policy_train.py --config-name policy_gradient
 ```
 
 ## Commands for Experiment

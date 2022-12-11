@@ -1,6 +1,4 @@
 import os
-from typing import Dict, Tuple
-from collections import OrderedDict
 import math
 
 import torch
@@ -8,6 +6,7 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 from torch.optim import AdamW
 import pytorch_lightning as pl
+
 import wandb
 from tqdm import tqdm
 from hydra.utils import instantiate
@@ -40,7 +39,7 @@ class PolicyGradientClassification(pl.LightningModule):
         self.env = ClassifyEnv(run_mode=run_mode, dataset=self.dataset)
         self.env.seed(42)
 
-        self.build_networks()
+        self.build_networks(self.hparams)
 
         self.capacity = len(self.dataset)
         self.buffer = ReplayBuffer(self.capacity)
@@ -74,9 +73,12 @@ class PolicyGradientClassification(pl.LightningModule):
     def get_device(self, batch):
         return batch[0][0].device if torch.cuda.is_available() else 'cpu'
 
-    def build_networks(self):
+    def build_networks(self, hparams):
+        device = hparams['gpu'][0]
         self.p_net = instantiate(self.model['policy_net'])
+        self.p_net.to(device)
         self.v_net = instantiate(self.model['value_net'])
+        self.v_net.to(device)
 
     def configure_optimizers(self):
         p_opt = AdamW(self.p_net.parameters(), lr=float(self.hparams['lr']))
@@ -89,11 +91,10 @@ class PolicyGradientClassification(pl.LightningModule):
 
     def forward(self, batch):
         logits = self.v_net(batch[0], batch[1])
-        predictions = self.p_net(logits) # ??
+        predictions = self.p_net(logits, dim=1)
         return predictions
 
     def training_step(self, batch):
-
         device = self.get_device(batch)
 
         terminal = False
@@ -105,8 +106,6 @@ class PolicyGradientClassification(pl.LightningModule):
 
             rewards.append(reward)
             probs.append(prob)
-
-
 
         if terminal:
             self.total_reward = self.episode_reward
@@ -123,7 +122,6 @@ class PolicyGradientClassification(pl.LightningModule):
                # 'value_loss' : v_loss,
                'total_reward': self.total_reward,
                'avg_reward': self.avg_reward,
-               'avg_return': sum(self.returns) / len(self.returns),
                'episode_steps': self.total_episode_steps
                }
         status = {'steps': self.global_step,

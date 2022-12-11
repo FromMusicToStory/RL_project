@@ -43,29 +43,11 @@ class PolicyNet(nn.Module):
         )
 
     def forward(self, input_ids, attention_mask):
-        input_ids, attention_mask = input_ids.unsqueeze(0), attention_mask.unsqueeze(0)
-        if self.model.device != input_ids.device:
-            input_ids = input_ids.to(self.model.device)
-            attention_mask = attention_mask.to(self.model.device)
         outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
         pooled_output = outputs[1]
         policy_output = self.policy_layer(pooled_output)
         return policy_output
 
-    def get_action_and_prob(self, state, device):
-        input_ids, attention_mask = state
-        if device != input_ids.device:
-            input_ids = input_ids.to(device)
-            attention_mask = attention_mask.to(device)
-        action_probability = self.forward(input_ids, attention_mask)
-        m = torch.distributions.Categorical(action_probability)
-        action = m.sample()
-        prob = m.log_prob(action)
-        return action.item(), prob
-
-    def get_action(self, input_ids, attention_mask):
-        action, _ = self.get_action_and_prob(input_ids, attention_mask)
-        return action
 
 if __name__ == '__main__':
     from torch.utils.data import DataLoader

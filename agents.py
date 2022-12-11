@@ -85,8 +85,25 @@ class PolicyAgent(Agent):
         self.buffer = replay_buffer
         self.state = self.env.reset()
 
-    def step(self, policy : nn.Module, device):
-        action, prob = policy.get_action_and_prob(self.state, device)
+    def get_action_and_prob(self, model: nn.Module, state: torch.Tensor, device: str):
+        input_id, attention_mask = state[0].unsqueeze(0), state[1].unsqueeze(0)
+
+        if not isinstance(input_id, torch.Tensor):
+            input_id = torch.Tensor(input_id).float()
+            attention_mask = torch.Tensor(attention_mask).float()
+        if device != 'cpu':
+            input_id = input_id.to(device)
+            attention_mask = attention_mask.to(device)
+
+        probabilities = model(input_ids=input_id, attention_mask=attention_mask)
+        m = torch.distributions.Categorical(probabilities)
+        action = m.sample()
+        prob = m.log_prob(action)
+        return action.item(), prob
+
+    @torch.no_grad()
+    def step(self, model: nn.Module, device: str):
+        action, prob = self.get_action_and_prob(model, self.state, device)
         new_state, reward, terminal, _ = self.env.step(action)
         trans = Transition(self.state, action, reward, new_state, terminal)
 

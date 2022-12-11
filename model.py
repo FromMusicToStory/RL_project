@@ -46,7 +46,6 @@ class DQNClassification(pl.LightningModule):
         self.capacity = len(self.dataset)
         self.buffer = ReplayBuffer(self.capacity)
         self.agent = ValueAgent(env=self.env, replay_buffer=self.buffer)
-
         self.total_reward = 0
         self.avg_reward = 0
         self.reward_list = []

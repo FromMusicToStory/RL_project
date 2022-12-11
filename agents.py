@@ -97,8 +97,8 @@ class PolicyAgent(Agent):
 
         probabilities = model(input_ids=input_id, attention_mask=attention_mask)
         m = torch.distributions.Categorical(probabilities)
-        action = m.sample()
-        prob = m.log_prob(action)
+        action = m.sample()        # sampling action
+        prob = m.log_prob(action)  # log probability of action
         return action.item(), prob
 
     @torch.no_grad()

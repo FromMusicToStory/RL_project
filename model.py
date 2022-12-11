@@ -109,7 +109,7 @@ class DQNClassification(pl.LightningModule):
         if terminal:
             self.total_reward = self.episode_reward
             self.reward_list.append(self.total_reward)
-            self.avg_reward = sum(self.reward_list[-100:]) / 100
+            self.avg_reward = sum(self.reward_list) / len(self.reward_list)
             self.episode_count += 1
             self.episode_reward = 0
             self.total_episode_steps = self.episode_steps
@@ -169,7 +169,6 @@ class DQNClassification(pl.LightningModule):
         dataset = RLDataset(replay_buffer=self.buffer, buffer_size=self.capacity)
         dataloader = DataLoader(dataset,
                                 batch_size=self.hparams['batch_size'], num_workers=self.hparams['num_workers'])
-
         return dataloader
 
     def train_dataloader(self):

@@ -7,15 +7,15 @@ The original Github is [here](https://github.com/linenus/DRL-For-imbalanced-Clas
 
 We aimed to extend the original method to a Korean multi-class text classification task using a pre-trained BERT model.
 
-We used the [KLAID](https://huggingface.co/datasets/lawcompany/KLAID) dataset.
+We used the [KLAID](https://huggingface.co/datasets/lawcompany/KLAID) dataset, which is a Korean legal document dataset.
 
 ## Differences from the original paper
 
 - [x]  Implemented the original paper's method using PyTorch Lightning, instead of [Keras-RL](https://github.com/keras-rl/keras-rl)
-- [x]  Used a Korean dataset [KLAID](https://huggingface.co/datasets/lawcompany/KLAID), instead of an English dataset
 - [x]  Converted to a multi-class classification task (10 classes), instead of a binary classification task
+- [x]  Used a Korean dataset [KLAID](https://huggingface.co/datasets/lawcompany/KLAID), instead of an English dataset
 - [x]  Used a pre-trained encoder, instead of an original network
-- [x]  Used not only DQN but also Double DQN, Dueling DQN, and Policy Gradient
+- [x]  Applied not only DQN, but also Double DQN, Dueling DQN, and Policy Gradient
 
 ## Installation
 

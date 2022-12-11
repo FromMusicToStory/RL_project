@@ -49,7 +49,8 @@ class PolicyGradientClassification(pl.LightningModule):
         self.avg_reward = 0
         self.reward_list = []
 
-        self.episode_reward = 0
+        self.episode_reward = []
+        self.episode_prob = []
         self.episode_count = 0
         self.episode_steps = 0
         self.total_episode_steps = 0
@@ -86,8 +87,8 @@ class PolicyGradientClassification(pl.LightningModule):
         return p_opt, v_opt
 
     def calculate_returns(self, rewards):
-        discounted_rewards = [ math.pow(self.gamma,i) * r for i, r in enumerate(rewards)]
-        return [ sum(discounted_rewards[i:]) for i in range(len(discounted_rewards))]
+        discounted_rewards = [math.pow(self.gamma,i) * r for i, r in enumerate(rewards)]
+        return [sum(discounted_rewards[i:]) for i in range(len(discounted_rewards))]
 
     def forward(self, batch):
         logits = self.v_net(batch[0], batch[1])
@@ -96,30 +97,48 @@ class PolicyGradientClassification(pl.LightningModule):
 
     def training_step(self, batch):
         device = self.get_device(batch)
+        p_opt, v_opt = self.optimizers()
 
         terminal = False
-        probs, rewards = [], []
         while terminal is not True:
             reward, terminal, prob = self.agent.step(self.p_net, device)
-            self.episode_reward += reward
+            self.episode_reward.append(reward)
+            self.episode_prob.append(prob)
             self.episode_steps += 1
 
-            rewards.append(reward)
-            probs.append(prob)
-
         if terminal:
-            self.total_reward = self.episode_reward
-            self.reward_list.append(self.total_reward)
-            self.avg_reward = sum(self.reward_list[-100:]) / 100
+            self.total_reward = sum(self.episode_reward)
+            self.avg_reward = sum(self.episode_reward[-100:]) / 100
             self.episode_count += 1
-            self.episode_reward = 0
             self.total_episode_steps = self.episode_steps
+
+            returns = self.calculate_returns(self.episode_reward)
+
+            p_loss = [-1 * self.episode_prob[i] * returns[i] for i in range(len(self.episode_prob))]
+            p_loss = torch.mean(torch.stack(p_loss))
+
+            states, actions, rewards, next_states, terminals = batch
+            predictions = self.v_net(states[0], states[1]).argmax(dim=1)
+            v_loss = self.v_criterion(torch.tensor(returns).to(device), predictions[:len(self.episode_prob)])
+
+            p_opt.zero_grad()
+            p_loss.requires_grad = True
+            self.manual_backward(p_loss)
+            p_opt.step()
+
+            v_opt.zero_grad()
+            v_loss.requires_grad = True
+            self.manual_backward(v_loss)
+            v_opt.zero_grad()
+
             self.episode_steps = 0
+            self.episode_reward = []
+            self.episode_prob = []
 
-        # self.log('policy_loss', p_loss)
+        self.log('policy_loss', p_loss, on_step=True, on_epoch=True)
 
-        log = {# 'policy_loss': p_loss,
-               # 'value_loss' : v_loss,
+        log = {'policy_loss': p_loss,
+               'value_loss' : v_loss,
                'total_reward': self.total_reward,
                'avg_reward': self.avg_reward,
                'episode_steps': self.total_episode_steps
@@ -132,9 +151,8 @@ class PolicyGradientClassification(pl.LightningModule):
                   }
 
         return {
-            'input_for_value' : batch,
-            'rewards': rewards,
-            'probs': probs,
+            'policy_loss': p_loss,
+            'value_loss': v_loss,
             'avg_reward' : torch.tensor(self.avg_reward, dtype=float),
             'total_reward' : torch.tensor(self.total_reward, dtype=float),
             'episode_steps' : torch.tensor(self.episode_steps, dtype=float),
@@ -146,26 +164,25 @@ class PolicyGradientClassification(pl.LightningModule):
     def training_epoch_end(self, outputs):
         # collect outputs
         collect = lambda key: torch.stack([x[key] for x in outputs]).mean()
-        rewards = collect('rewards')
-        probs = collect('probs')
-        batch = collect('input_for_value')
-        p_opt, v_opt = self.optimizers()
-        returns = self.calculate_returns(rewards)
-        p_loss = - (returns * probs).mean()
+        avg_reward = collect('avg_reward')
+        total_reward = collect('total_reward')
+        episode_steps = collect('episode_steps')
+        p_loss = collect('policy_loss')
+        v_loss = collect('value_loss')
 
-        v_loss = self.v_criterion(returns[0], self.v_net(batch[0][0], batch[0][1]))
-
-        p_opt.zero_grad()
-        self.manual_backward(p_loss)
-        p_opt.step()
-
-        v_opt.zero_grad()
-        self.manual_backward(v_loss)
-        v_opt.zero_grad()
-
-        self.log('policy_loss', p_loss)
         wandb.log({'train/policy_loss': p_loss})
         wandb.log({'train/value_loss': v_loss})
+
+        wandb.log({"train/avg_reward": avg_reward})
+
+        wandb.log({"train/total_reward": total_reward})
+        wandb.log({"train/episode_steps": episode_steps})
+
+        # reset episode related variables
+        self.episode_reward = []
+        self.episode_count = 0
+        self.episode_steps = 0
+
 
     def __dataloader(self):
         dataset = RLDataset(replay_buffer=self.buffer, buffer_size=self.capacity)

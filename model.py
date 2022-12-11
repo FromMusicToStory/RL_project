@@ -169,7 +169,6 @@ class DQNClassification(pl.LightningModule):
         dataset = RLDataset(replay_buffer=self.buffer, buffer_size=self.capacity)
         dataloader = DataLoader(dataset,
                                 batch_size=self.hparams['batch_size'], num_workers=self.hparams['num_workers'])
-
         return dataloader
 
     def train_dataloader(self):

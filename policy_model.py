@@ -108,7 +108,7 @@ class PolicyGradientClassification(pl.LightningModule):
 
         if terminal:
             self.total_reward = sum(self.episode_reward)
-            self.avg_reward = sum(self.episode_reward[-100:]) / 100
+            self.avg_reward = sum(self.episode_reward) / self.episode_steps
             self.episode_count += 1
             self.total_episode_steps = self.episode_steps
 

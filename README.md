@@ -13,7 +13,7 @@ We used the [KLAID](https://huggingface.co/datasets/lawcompany/KLAID) dataset, w
 
 - [x]  Implemented the original paper's method using PyTorch Lightning, instead of [Keras-RL](https://github.com/keras-rl/keras-rl)
 - [x]  Converted to a multi-class classification task (10 classes), instead of a binary classification task
-- [x]  Used a Korean dataset [KLAID](https://huggingface.co/datasets/lawcompany/KLAID), instead of an English dataset
+- [x]  Used a Korean dataset, instead of the original English dataset
 - [x]  Used a pre-trained encoder, instead of an original network
 - [x]  Applied not only DQN, but also Double DQN, Dueling DQN, and Policy Gradient
 

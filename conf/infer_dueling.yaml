@@ -1,7 +1,7 @@
 # trainer
 gpu: "cpu"
 net_name: "DQN_dueling"
-checkpoint_path: "checkpoint/DQN_dueling/epoch=02-loss=0.16.ckpt"
+checkpoint_path: "checkpoint/DQN_dueling/epoch=01-loss=0.22.ckpt"
 
 
 model:
@@ -12,11 +12,11 @@ model:
     _target_: network.DuelingClassifier
     model_name: ${model.model_name}
     num_classes: 10
-    loss:
-      _target_: loss.DQNLoss
-      criterion:
-        _target_: torch.nn.MSELoss  # nn.SmoothL1Loss()
-      gamma: 0.9
+  loss:
+    _target_: loss.DQNLoss
+    criterion:
+      _target_: torch.nn.MSELoss  # nn.SmoothL1Loss()
+    gamma: 0.9
 
   # optimizer
   lr: 5e-5

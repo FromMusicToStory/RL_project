@@ -1,7 +1,7 @@
 # trainer
 gpu: "cpu"
 net_name: "DQN_double"
-checkpoint_path: "checkpoint/DQN_double/epoch=02-loss=0.16.ckpt"
+checkpoint_path: "checkpoint/DQN_double/epoch=00-loss=0.12.ckpt"
 
 
 model:

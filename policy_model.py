@@ -35,12 +35,13 @@ class PolicyGradientClassification(pl.LightningModule):
 
         self.num_classes = len(self.dataset.get_class_num())
 
+        self.build_networks(self.hparams)
+
         if run_mode == 'train':
             print("\nInitializing the environment...")
             self.env = ClassifyEnv(run_mode=run_mode, dataset=self.dataset)
             self.env.seed(42)
 
-            self.build_networks(self.hparams)
 
             self.capacity = len(self.dataset)
             self.buffer = ReplayBuffer(self.capacity)
@@ -76,7 +77,10 @@ class PolicyGradientClassification(pl.LightningModule):
         return batch[0][0].device if torch.cuda.is_available() else 'cpu'
 
     def build_networks(self, hparams):
-        device = hparams['gpu'][0]
+        if isinstance(hparams['gpu'], str):
+            device = hparams['gpu']
+        else:
+            device = hparams['gpu'][0]
         self.p_net = instantiate(self.model['policy_net'])
         self.p_net.to(device)
         self.v_net = instantiate(self.model['value_net'])

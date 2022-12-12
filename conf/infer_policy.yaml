@@ -1,7 +1,7 @@
 # trainer
 gpu: "cpu"
 net_name: "PolicyGradient"
-checkpoint_path: "checkpoint/PolicyGradient/epoch=02-loss=0.16.ckpt"
+checkpoint_path: "checkpoint/PolicyGradient/last-v1.ckpt"
 
 
 model:

@@ -25,7 +25,7 @@ def get_network(net_name, checkpoint_path, config):
     return model
 
 
-@hydra.main(version_base=None, config_path='conf', config_name='infer_dqn')
+@hydra.main(version_base=None, config_path='conf', config_name='infer_policy')
 def main(args):
     # get RL network
     model = get_network(args.net_name, args.checkpoint_path, args)

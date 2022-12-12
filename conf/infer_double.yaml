@@ -1,0 +1,41 @@
+# trainer
+gpu: "cpu"
+net_name: "DQN_double"
+checkpoint_path: "checkpoint/DQN_double/epoch=02-loss=0.16.ckpt"
+
+
+model:
+  model_name: "klue/roberta-base"
+  batch_size: 32
+  num_workers: 8
+  net:
+    _target_: network.Classifier
+    model_name: ${model.model_name}
+    num_classes: 10
+  loss:
+    _target_: loss.DoubleDQNLoss
+    criterion:
+      _target_: torch.nn.MSELoss  # nn.SmoothL1Loss()
+    gamma: 0.9
+
+  # optimizer
+  lr: 5e-5
+
+  # model sync rate
+  sync_rate: 10
+
+  # eps
+  eps_start: 1.0
+  eps_end: 0.01
+
+  # to populate
+  initial_eps: 1.0
+
+  gpu: ${gpu}
+
+# seed
+seed: 9999
+
+# wandb logger
+project: RL
+name: DQN_double

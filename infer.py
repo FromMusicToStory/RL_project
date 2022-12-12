@@ -17,15 +17,13 @@ def get_network(net_name, checkpoint_path, config):
         model.to('cpu')
         model.load_state_dict(torch.load(checkpoint_path, map_location=torch.device("cpu")), strict=False)
     else:
-        model = PolicyGradientClassification.load_from_checkpoint(checkpoint_path)
+        model = PolicyGradientClassification(hparams=config.model, run_mode='test')
         model.to('cpu')
         model.load_state_dict(torch.load(checkpoint_path, map_location=torch.device("cpu")), strict=False)
 
 
     return model
 
-def pred_to_label(pred):
-    pass
 
 @hydra.main(version_base=None, config_path='conf', config_name='infer_dqn')
 def main(args):

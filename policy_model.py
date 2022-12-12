@@ -102,8 +102,6 @@ class PolicyGradientClassification(pl.LightningModule):
         terminal = False
         probs, rewards = [], []
 
-        v_net_output = self.v_net(batch[0][0], batch[0][1]).max(1)[0]
-        v_net_output = v_net_output * 0.9
         while terminal is not True:
             reward, terminal, prob = self.agent.step(self.p_net, device)
             self.episode_reward.append(reward)
@@ -125,8 +123,9 @@ class PolicyGradientClassification(pl.LightningModule):
             p_loss = torch.mean(torch.stack(p_loss))
 
             states, actions, rewards, next_states, terminals = batch
-            predictions = self.v_net(states[0], states[1]).argmax(dim=1)
-            v_loss = self.v_criterion(torch.tensor(returns).to(device), predictions[:len(self.episode_prob)])
+            predictions = self.v_net(states[0], states[1]).argmax(dim=1)[0] * 0.9   # multiply gamma
+
+            v_loss = self.v_criterion(torch.tensor(returns).to(device), predictions * torch.tensor(self.episode_reward).to(device))
 
             p_opt.zero_grad()
             p_loss.requires_grad = True

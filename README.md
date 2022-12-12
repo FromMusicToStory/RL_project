@@ -72,5 +72,9 @@ python train.py --config-name dqn seed=6203 name=dqn_6203
 python train.py --config-name dqn seed=3040 name=dqn_3040 
 python train.py --config-name dqn seed=6427 name=dqn_6427
 ```
+
+- If you want to test the model, download & unzip the checkpoint files from [Link](https://sogang365-my.sharepoint.com/:f:/g/personal/jhlee22_o365_sogang_ac_kr/EsMiyFjIG-RPrwXC27cqJOkB5V8YkbOmo060EXBu3n_oaA?e=ymoLwy)
+
+
 ## References
 [Pytorch-Lightning Tutorial For DQN](https://pytorch-lightning.readthedocs.io/en/stable/notebooks/lightning_examples/reinforce-learning-DQN.html)

@@ -80,21 +80,21 @@ python train.py --config-name dqn seed=6427 name=dqn_6427
 
 * infer Vanilla DQN
 ```
-python train.py --config-name infer_dqn checkpoint_path={checkpoint_path}
+python infer.py --config-name infer_dqn checkpoint_path={checkpoint_path}
 ```
 * infer Double DQN
 ```
-python train.py --config-name infer_double checkpoint_path={checkpoint_path}
+python infer.py --config-name infer_double checkpoint_path={checkpoint_path}
 ```
 
 * infer Dueling DQN
 ```
-python train.py --config-name infer_dueling checkpoint_path={checkpoint_path}
+python infer.py --config-name infer_dueling checkpoint_path={checkpoint_path}
 ```
 
 * infer Policy Gradient
 ```
-python policy_train.py --config-name infer_policy checkpoint_path={checkpoint_path}
+python infer.py --config-name infer_policy checkpoint_path={checkpoint_path}
 ```
 ## References
 [Pytorch-Lightning Tutorial For DQN](https://pytorch-lightning.readthedocs.io/en/stable/notebooks/lightning_examples/reinforce-learning-DQN.html)

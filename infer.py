@@ -27,15 +27,8 @@ def get_network(net_name, checkpoint_path, config):
         model.to('cpu')
         model.load_state_dict(torch.load(checkpoint_path, map_location=torch.device("cpu")), strict=False)
 
-    network = None
-    if 'DQN' == net_name:
-        network = model.classification_model
-    elif 'DQN_double' == net_name or 'DQN_dueling':
-        network = model.target_model
-    else:
-        network = model.p_net
-    print(network)
-    return network, model.dataset
+
+    return model
 
 def pred_to_label(pred):
     pass
@@ -43,8 +36,16 @@ def pred_to_label(pred):
 @hydra.main(version_base=None, config_path='conf', config_name='infer_dqn')
 def main(args):
     # get RL network
-    net, dataset = get_network(args.net_name, args.checkpoint_path, args)
+    model = get_network(args.net_name, args.checkpoint_path, args)
+    if args.net_name == 'DQN':
+        net = model.classification_model
+    elif args.net_name == 'DQN_double' or args.net_name == 'DQN_dueling':
+        net = model.target_model
+    else:
+        net = model.p_net
 
+    dataset = model.dataset
+    label_list = dataset.class_list
     # infer
     trues, preds = [], []
     print("\nstart infer")
@@ -60,7 +61,7 @@ def main(args):
     print(weighted)
     f1 = f1_score(trues, preds, average='macro')
     print(f1)
-    conf_matrix = confusion_matrix(y_true=trues, y_pred=preds, labels=net.dataset.class_list)
+    conf_matrix = confusion_matrix(y_true=trues, y_pred=preds, labels=label_list)
     print(conf_matrix)
 
 

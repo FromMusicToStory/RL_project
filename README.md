@@ -76,25 +76,25 @@ python train.py --config-name dqn seed=6427 name=dqn_6427
 
 ## Inference
 
-- If you want to test the model, download & unzip the checkpoint files from [Link](https://sogang365-my.sharepoint.com/:f:/g/personal/jhlee22_o365_sogang_ac_kr/EsMiyFjIG-RPrwXC27cqJOkB5V8YkbOmo060EXBu3n_oaA?e=ymoLwy)
+If you want to test the model, download & unzip the checkpoint files from [Link](https://sogang365-my.sharepoint.com/:f:/g/personal/jhlee22_o365_sogang_ac_kr/EsMiyFjIG-RPrwXC27cqJOkB5V8YkbOmo060EXBu3n_oaA?e=ymoLwy)
 
 * infer Vanilla DQN
 ```
-python train.py --config-name infer_dqn checkpoint_path={checkpoint_path}
+python infer.py --config-name infer_dqn checkpoint_path={checkpoint_path}
 ```
 * infer Double DQN
 ```
-python train.py --config-name infer_double checkpoint_path={checkpoint_path}
+python infer.py --config-name infer_double checkpoint_path={checkpoint_path}
 ```
 
 * infer Dueling DQN
 ```
-python train.py --config-name infer_dueling checkpoint_path={checkpoint_path}
+python infer.py --config-name infer_dueling checkpoint_path={checkpoint_path}
 ```
 
 * infer Policy Gradient
 ```
-python policy_train.py --config-name infer_policy checkpoint_path={checkpoint_path}
+python infer.py --config-name infer_policy checkpoint_path={checkpoint_path}
 ```
 ## References
 [Pytorch-Lightning Tutorial For DQN](https://pytorch-lightning.readthedocs.io/en/stable/notebooks/lightning_examples/reinforce-learning-DQN.html)

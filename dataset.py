@@ -22,8 +22,8 @@ class KLAID_dataset(Dataset):
 
         if extract_class:
             per_class_num  = self.get_class_num()
-            class_list = self.extract_class(per_class_num, num_to_left=10)
-            self.dataset = self.dataset.filter(lambda x: x['laws_service_id'] in class_list)
+            self.class_list = self.extract_class(per_class_num, num_to_left=10)
+            self.dataset = self.dataset.filter(lambda x: x['laws_service_id'] in self.class_list)
 
         self.encodings = []
         print("dataset preparing for faster loading")
